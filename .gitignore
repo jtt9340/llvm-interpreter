@@ -1,5 +1,5 @@
-# Object files
-*.o
+# Build outputs
+target/
 
-# The name of the output binary
-kaleidescope
+# macOS cruft
+**/.DS_Store

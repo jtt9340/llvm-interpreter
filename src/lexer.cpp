@@ -31,13 +31,42 @@ int gettok() {
 	}
 
 	// Parse numeric values and store them in NumVal
-	// TODO: This will currently parse 1.23.45.67 and the like as 1.23
-	// Fix it so that it only parses single decimal points
-	if (std::isdigit(LastChar) || LastChar == '.') {
-		std::string NumStr;
+	std::string NumStr;
+	if (LastChar == '.') {
+		// If the numeric value started with a '.', then we must accept at least one number
+		// and can only accept numbers
 		do {
 			NumStr += LastChar;
 			LastChar = std::getchar();
+		} while (std::isdigit(LastChar));
+
+		// Additional byte storage for the parts of NumStr that couldn't be parsed as a number
+		// Used to indicate an invalid number token
+		char *NumStrEnd = nullptr; 
+
+		NumVal = std::strtod(NumStr.c_str(), &NumStrEnd);
+		if (NumStrEnd) {
+			// There were parts of NumStr that could not be parsed as a double, so this is an
+			// invalid token
+			return tok_err;
+		}
+
+		return tok_number;
+	} else if (std::isdigit(LastChar)) {
+		// If we have encountered a decimal point yet
+		bool DecimalPointFound = false;
+		
+		// Read either numbers or .'s until one . is found
+		do {
+			NumStr += LastChar;
+			LastChar = std::getchar();
+			if (!DecimalPointFound && LastChar == '.') {
+				// This is our first decimal point so we accept it
+				DecimalPointFound = true;
+			} else if (LastChar == '.') {
+				// This is not our first decomal point so this is an error
+				return tok_err;
+			}
 		} while (std::isdigit(LastChar) || LastChar == '.');
 
 		NumVal = std::strtod(NumStr.c_str(), 0);
@@ -60,7 +89,7 @@ int gettok() {
 	if (LastChar == EOF)
 		return tok_eof;
 
-	// Otherwise, just return the character as its ascii value
+	// Otherwise, just return the character as its ASCII value
 	int ThisChar = LastChar;
 	LastChar = std::getchar();
 	return ThisChar;
