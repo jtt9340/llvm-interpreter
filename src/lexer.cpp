@@ -1,4 +1,5 @@
 #include <string>  // std::string
+#include <cstring> // std::strlen
 
 #include <cctype>  // std::isspace, std::isalpha, std::isalnum, std::isdigit
 #include <cstdio>  // std::getchar, EOF
@@ -45,7 +46,7 @@ int gettok() {
 		char *NumStrEnd = nullptr; 
 
 		NumVal = std::strtod(NumStr.c_str(), &NumStrEnd);
-		if (NumStrEnd) {
+		if (std::strlen(NumStrEnd)) {
 			// There were parts of NumStr that could not be parsed as a double, so this is an
 			// invalid token
 			return tok_err;

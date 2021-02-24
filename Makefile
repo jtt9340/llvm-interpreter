@@ -45,7 +45,7 @@ $(DBGEXE):	$(DBGOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^
 
 $(DBGDIR)/%.o:	src/%.cpp
-	$(CXX) -c $(CXXLFAGS) $(DBGFLAGS) -o $@ $<
+	$(CXX) -c $(CXXLFAGS) $(DBGCFLAGS) -o $@ $<
 
 #
 # Release rules

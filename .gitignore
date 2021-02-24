@@ -1,5 +1,8 @@
 # Build outputs
 target/
 
+# Used for creating test programs and other one-off programs
+scratch/
+
 # macOS cruft
 **/.DS_Store
