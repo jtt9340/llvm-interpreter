@@ -7,6 +7,10 @@ CC =	clang
 CXX =	clang++
 CFLAGS = -Wall -Wextra -pedantic
 CXXFLAGS = $(CFLAGS)
+# Might need to set
+# CPPFLAGS =	-I/usr/local/opt/llvm/include
+# Use the libc++ bundled with Homebrew
+LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
 
 #
 # Project files
@@ -21,7 +25,9 @@ EXE =	kaleidescope
 DBGDIR =	target/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
-DBGCFLAGS =	-g -O0
+DBGCFLAGS =	-g -O1 -fsanitize=address -fno-omit-frame-pointer
+# Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
+# DBGFLAGS += -fno-optimize-sibling-calls
 
 #
 # Release build settings
@@ -45,7 +51,7 @@ $(DBGEXE):	$(DBGOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^
 
 $(DBGDIR)/%.o:	src/%.cpp
-	$(CXX) -c $(CXXLFAGS) $(DBGCFLAGS) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $@ $<
 
 #
 # Release rules
@@ -53,7 +59,7 @@ $(DBGDIR)/%.o:	src/%.cpp
 release:	$(RELEXE)
 
 $(RELEXE):	$(RELOBJS)
-	$(CXX) $(CFLAGS) $(RELCFLAGS) -o $^
+	$(CXX) $(CXXFLAGS) $(RELCFLAGS) -o $(RELEXE) $^
 
 $(RELDIR)/%.o:	src/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
