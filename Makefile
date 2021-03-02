@@ -15,7 +15,7 @@ LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
 #
 # Project files
 #
-SRCS =	src/lexer.cpp src/main.cpp
+SRCS =	src/ast.cpp src/lexer.cpp src/main.cpp  # Update this variable as more files are added to the project
 OBJS =	$(SRCS:src/%.cpp=%.o)
 EXE =	kaleidescope
 
