@@ -1,5 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
+
+#include "ast.h"
+
 // The lexer returns tokens [0-255] if it is an unknown character, otherwise one
 // of these for known things.
 enum Token {
@@ -33,4 +36,23 @@ enum Token {
 /// @return an integer, either an enum Token if the lexed token is a recognized token,
 /// 		or the ASCII value of the first character read
 int gettok();
+
+// TODO: Documentation
+static std::unique_ptr<ExprAST> ParseNumberExpr();
+
+// TODO: Documentation
+static std::unique_ptr<ExprAST> ParseParenExpr();
+
+// TODO: Documentation
+static std::unique_ptr<ExprAST> ParseIdentififerExpr();
+
+// TODO: Documentation
+static std::unique_ptr<ExprAST> ParsePrimary();
+
+// TODO: Documentation
+static int GetTokPrecedence();
+
+// TODO: Documentation
+static std::unique_ptr<ExprAST> ParseExpression();
+
 #endif

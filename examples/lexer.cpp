@@ -1,6 +1,6 @@
-#include <iostream>
+#include <iostream> // std::cout, std::cerr, std::endl
 
-#include "lexer.h"
+#include "../src/lexer.h"
 
 int main() {
 	const int tok = gettok();

@@ -15,7 +15,9 @@ LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
 #
 # Project files
 #
-SRCS =	src/ast.cpp src/lexer.cpp src/main.cpp  # Update this variable as more files are added to the project
+
+# Update this variable as more files are added to the project
+SRCS =	src/ast.cpp src/lexer.cpp src/logging.cpp src/main.cpp
 OBJS =	$(SRCS:src/%.cpp=%.o)
 EXE =	kaleidescope
 
@@ -37,7 +39,12 @@ RELEXE =	$(RELDIR)/$(EXE)
 RELOBJS =	$(addprefix $(RELDIR)/, $(OBJS))
 RELCFLAGS =	-O2 -DNDEBUG
 
-.PHONY:	all clean realclean debug release prep remake
+#
+# Example build settings
+#
+EXAMPLEDIR =	examples
+
+.PHONY:	all clean realclean debug release prep remake examples
 
 # Default build
 all:	prep release
@@ -65,6 +72,14 @@ $(RELDIR)/%.o:	src/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
 
 #
+# Example rules
+#
+examples:	$(patsubst $(EXAMPLEDIR)/%.cpp,$(DBGDIR)/%,$(wildcard $(EXAMPLEDIR)/*.cpp))
+
+$(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp
+	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o) $<
+	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o)
+#
 # Other rules
 #
 prep:
@@ -73,7 +88,7 @@ prep:
 remake:	realclean all
 
 clean:
-	rm -f $(RELOBJS) $(DBGOBJS)
+	@rm -v -f $(RELOBJS) $(DBGOBJS)
 
 realclean:	clean
-	rm -f $(RELEXE) $(DBGEXE)
+	@rm -v -f $(RELEXE) $(DBGEXE)
