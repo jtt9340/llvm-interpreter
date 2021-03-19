@@ -5,8 +5,6 @@
 #include <cstdio>		// std::getchar, EOF
 #include <cstdlib>		// std::strtod
 
-#include <unordered_map>	// std::unordered_map
-
 #include "ast.h"		// ExprAST, NumberExprAST
 #include "lexer.h"		// gettok, enum Token
 #include "logging.h"	// LogError, LogErrorP
@@ -15,7 +13,6 @@
 
 static std::string                   IdentifierStr;		// Filled in if tok_identifier
 static double                        NumVal;			// Filled in if tok_number
-static std::unordered_map<char, int> BinopPrecedence;	// This holds the precedence for each binary operator that is defined
 
 /// CurTok/getNextToken - Provide a simple token buffer. CurTok is the
 /// current token the parser is looking at. getNextToken reads another
@@ -199,6 +196,45 @@ static int GetTokPrecedence() {
 	return TokPrec <= 0 ? -1 : TokPrec;
 }
 
+/// binoprhs
+///   ::= ('+' primary)*
+static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
+                                              std::unique_ptr<ExprAST> LHS) {
+	// If this is a binary operator, find its precedence
+	loop {
+		int TokPrec = GetTokPrecedence();
+
+		// If this is a binary operator that binds with at least as tightly as the current binary operator,
+		// consume it, otherwise we are done.
+		if (TokPrec < ExprPrec)
+			return LHS;
+
+		// At this point, we are indeed parsing a binary operator with a high enough precedence.
+		// If it wasn't a binary operator, TokPrec would be -1 which would indeed be < Exprec,
+		// so we wouldn't have gotten here by now.
+		int BinOp = CurTok;
+		getNextToken(); // eat the binary operator
+
+		// Parse the primary expression after the binary operator.
+		auto RHS = ParsePrimary();
+		if (!RHS)
+			return nullptr;
+
+		// If the current binary operator has lower precedence than the binary operator
+		// after the RHS, then let the current RHS be the LHS in the next binary operator.
+		int NextPrec = GetTokPrecedence();
+		if (TokPrec < NextPrec) {
+			RHS = ParseBinOpRHS(TokPrec + 1, std::move(RHS));
+			if (!RHS)
+				return nullptr;
+		}
+
+		// Otherwise, the current binary operator takes precedence, so let's build an AST node
+		// containing the current binary operator and its operands.
+		LHS = std::make_unique<BinaryExprAST>(BinOp, std::move(LHS), std::move(RHS));
+	} // Loop back to the top, looking for more binary operators until there are no more expressions to parse.
+}
+
 /// expression
 ///   ::= primary binoprhs
 ///
@@ -207,14 +243,4 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 	// Attempt to parse an expression; if it is successfull (a valid token)
 	// then parse a potential RHS in case it is a binary operator 
 	return LHS ? ParseBinOpRHS(0, std::move(LHS)) : nullptr;
-}
-
-int main() {
-	// Create the binary operators, specifying their precedences.
-	// The lower the number, the lower the precedence.
-	// TODO: Add more binary operators
-	BinopPrecedence['<'] = 10; // Lowest precedence
-	BinopPrecedence['+'] = 20;
-	BinopPrecedence['-'] = 20;
-	BinopPrecedence['*'] = 40; // Highest precedence
 }

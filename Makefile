@@ -43,6 +43,7 @@ RELCFLAGS =	-O2 -DNDEBUG
 # Example build settings
 #
 EXAMPLEDIR =	examples
+EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 
 .PHONY:	all clean realclean debug release prep remake examples
 
@@ -72,13 +73,14 @@ $(RELDIR)/%.o:	src/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
 
 #
-# Example rules
+# Example rules - is there a cleaner way to write this part of the makefile?
 #
 examples:	$(patsubst $(EXAMPLEDIR)/%.cpp,$(DBGDIR)/%,$(wildcard $(EXAMPLEDIR)/*.cpp))
 
-$(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp
+$(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o) $<
-	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o)
+	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o) $(EXAMPLEOBJS)
+
 #
 # Other rules
 #

@@ -1,7 +1,11 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <unordered_map>
+
 #include "ast.h"
+
+static std::unordered_map<char, int> BinopPrecedence;	// This holds the precedence for each binary operator that is defined
 
 // The lexer returns tokens [0-255] if it is an unknown character, otherwise one
 // of these for known things.
