@@ -1,5 +1,8 @@
 # Build outputs
 target/
+*.o
+*.so
+*.dylib
 
 # Used for creating test programs and other one-off programs
 scratch/
