@@ -5,14 +5,15 @@
 #include <cstdio>		// std::getchar, EOF
 #include <cstdlib>		// std::strtod
 
-#include "ast.h"		// ExprAST, NumberExprAST
+#include "ast.h"		// class ExprAST, class NumberExprAST, class VariableExprAST,
+				// class BinaryExprAST, class CallExprAST, class PrototypeAST, class FunctionAST
 #include "lexer.h"		// gettok, enum Token
 #include "logging.h"	// LogError, LogErrorP
 
 #define loop for(;;)	// Infinite loop
 
-static std::string                   IdentifierStr;		// Filled in if tok_identifier
-static double                        NumVal;			// Filled in if tok_number
+static std::string IdentifierStr; // Filled in if tok_identifier
+static double      NumVal;        // Filled in if tok_number
 
 /// CurTok/getNextToken - Provide a simple token buffer. CurTok is the
 /// current token the parser is looking at. getNextToken reads another
@@ -243,4 +244,56 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 	// Attempt to parse an expression; if it is successfull (a valid token)
 	// then parse a potential RHS in case it is a binary operator 
 	return LHS ? ParseBinOpRHS(0, std::move(LHS)) : nullptr;
+}
+
+/// prototype
+///   ::= id '(' id* ')'
+static std::unique_ptr<PrototypeAST> ParsePrototype() {
+	if (CurTok != tok_identifier)
+		return LogErrorP("Expected function name in prototype");
+
+	std::string FnName = IdentifierStr;
+	getNextToken(); // Eat the function name
+
+	if (CurTok != '(')
+		return LogErrorP("Expected '(' in prototype");
+
+	// Read the list of argument names.
+	std::vector<std::string> ArgNames;
+	while (getNextToken() == tok_identifier)
+		ArgNames.push_back(IdentifierStr);
+	if (CurTok != ')')
+		return LogErrorP("Expected ')' in prototype");
+
+	// We successfully parsed a function prototype.
+	getNextToken(); // Eat the ')'
+
+	return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
+}
+
+/// definition ::= 'def' prototype expression
+static std::unique_ptr<FunctionAST> ParseDefinition() {
+	getNextToken(); // eat the 'def' keyword
+	auto Proto = ParsePrototype();
+	if (!Proto) return nullptr;
+
+	if (auto E = ParseExpression())
+		return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+	return nullptr;
+}
+
+/// external ::= 'extern' prototype
+static std::unique_ptr<PrototypeAST> ParseExtern() {
+	getNextToken(); // eat the 'extern' keyword
+	return ParsePrototype();
+}
+
+/// toplevelexpr ::= expression
+static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
+	if (auto E = ParseExpression()) {
+		// Make an anonymous function prototype.
+		auto Proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
+		return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
+	}
+	return nullptr;
 }

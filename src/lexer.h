@@ -146,4 +146,52 @@ static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 /// @return an AST node (tree) represending the parsed expression
 static std::unique_ptr<ExprAST> ParseExpression();
 
+/// Parse a function prototype definition, e.g.
+///
+///			foo(a b)
+///
+/// And return an AST node that encapsulates this function prototype definition.
+///
+/// This function expects the current token as returned by gettok() to be an identifier,
+/// or else this function will return a nullptr. This function will also return a nullprt
+/// if an opening parenthesis isn't found after the initial function name, and if a closing
+/// parenthesis isn't found.
+///
+/// @return an AST node representing the function prototype declaration, or nullptr if the current
+///         token is not an identifier, or if opening and closing parentheses cannot be found
+static std::unique_ptr<PrototypeAST> ParsePrototype();
+
+/// Parse a complete function definition, which looks like
+///
+///		def func_name(param1 param2) expr
+///
+/// and return an AST node that encapsulates this function definition.
+/// This function expects the current token as returned by gettok() to be
+/// tok_def, and returns a nullptr if the 'func_name(param1 param2)' portion
+/// or the expression ('expr') portion of a function is not present/parse-able.
+///
+/// @return an AST node representing a complete function definition, which starts with
+///         the 'def' keyword, followed by a function prototype, followed by an arbitrarily
+///         complex expression; or nullptr if a function prototype or expression is not able
+///         to be parsed
+static std::unique_ptr<FunctionAST> ParseDefinition();
+
+/// Parse an extern function declaration, which is the 'extern' keyword followed by a function
+/// prototype definition, and return an AST node representing the function prototype. This function
+/// expects the current token as returned by gettok() to be tok_extern, then expects to parse
+/// a function prototype definition as parsed by ParsePrototype.
+///
+/// @return an AST node representing the function prototype definition for the parsed extern function
+///         declaration, or nullptr if there are no opening or closing parenthesis as part of the
+///         extern function declaration
+static std::unique_ptr<PrototypeAST> ParseExtern();
+
+/// Parse an expression declared outside of a function. This function exists to allow the user to
+/// interact with the interpreter using a REPL, and just creates an AST node for an anonymous function
+/// definition using the parsed expression.
+///
+/// @return an AST node for a complete function definition containing an expression that is parsed at
+///         the top-level, i.e. outside of a function
+static std::unique_ptr<FunctionAST> ParseTopLevelExpr();
+
 #endif
