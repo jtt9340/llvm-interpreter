@@ -2,8 +2,9 @@
 #include <cstring>		// std::strlen
 
 #include <cctype>		// std::isspace, std::isalpha, std::isalnum, std::isdigit
-#include <cstdio>		// std::getchar, EOF
+#include <cstdio>		// std::getchar, std::fprintf, EOF
 #include <cstdlib>		// std::strtod
+#include <unordered_map>// std::unordered_map
 
 #include "ast.h"		// class ExprAST, class NumberExprAST, class VariableExprAST,
 				// class BinaryExprAST, class CallExprAST, class PrototypeAST, class FunctionAST
@@ -12,21 +13,32 @@
 
 #define loop for(;;)	// Infinite loop
 
-static std::string IdentifierStr; // Filled in if tok_identifier
-static double      NumVal;        // Filled in if tok_number
+static std::string                   IdentifierStr;   // Filled in if tok_identifier
+static double                        NumVal;          // Filled in if tok_number
+static std::unordered_map<char, int> BinopPrecedence; // This holds the precedence for each binary operator that is defined
 
 /// CurTok/getNextToken - Provide a simple token buffer. CurTok is the
 /// current token the parser is looking at. getNextToken reads another
 /// token from the lexer and updates CurTok with its results.
 static int CurTok;
-static int getNextToken() {
+int getNextToken() {
   // gettok() is forward-declared in lexer.h so we can call it here even
   // though the definition does not appear until below
   return CurTok = gettok();
 }
 
+void SetupBinopPrecedences() {
+	// Create the binary operators, specifying their precedences.
+	// The lower the number, the lower the precedence.
+	// TODO: Add more binary operators
+	BinopPrecedence['<'] = 10; // Lowest precedence
+	BinopPrecedence['+'] = 20;
+	BinopPrecedence['-'] = 20;
+	BinopPrecedence['*'] = 40; // Highest precedence
+}
+
 // gettok - Return the next token from standard input.
-int gettok() {
+static int gettok() {
 	static int LastChar = ' ';
 
 	// Skip any whitespace.
@@ -296,4 +308,54 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
 		return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
 	}
 	return nullptr;
+}
+
+static void HandleDefinition() {
+	if (ParseDefinition()) {
+		std::fprintf(stderr, "Parsed a function definition.\n");
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
+}
+
+static void HandleExtern() {
+	if (ParseExtern()) {
+		std::fprintf(stderr, "Parsed an extern function declaration.\n");
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
+}
+
+static void HandleTopLevelExpression() {
+	// Evaluate a top-level expression in an anonymous function.
+	if (ParseTopLevelExpr()) {
+		std::fprintf(stderr, "Parsed a top-level expression\n");
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
+}
+
+/// top ::= definition | external | expression | ';'
+void MainLoop(const char *ProgName) {
+	loop {
+		std::fprintf(stderr, "%s> ", ProgName);
+		switch (CurTok) {
+		case tok_eof:
+			return;
+		case ';': // ignore top-level semicolons
+			getNextToken(); // eat the ';'
+			break;
+		case tok_def:
+			HandleDefinition();
+			break;
+		case tok_extern:
+			HandleExtern();
+			break;
+		default:
+			HandleTopLevelExpression();
+		}
+	}
 }

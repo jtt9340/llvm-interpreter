@@ -5,12 +5,14 @@
 #
 CC =	clang
 CXX =	clang++
-CFLAGS = -Wall -Wextra -pedantic
-CXXFLAGS = $(CFLAGS)
-# Might need to set
-# CPPFLAGS =	-I/usr/local/opt/llvm/include
-# Use the libc++ bundled with Homebrew
-LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
+CFLAGS = -Wall -Wextra -pedantic -pipe 
+CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags)
+
+ifneq ($(shell whence brew >/dev/null 2>&1 && brew ls --versions llvm),)
+	# Use the libc++ bundled with Homebrew
+	CPPFLAGS =	-I/usr/local/opt/llvm/include
+	LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
+endif
 
 #
 # Project files

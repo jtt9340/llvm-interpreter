@@ -1,9 +1,5 @@
 #include "ast.h"
 
-/// The destructor for the ExprAST class. Since ther ExprAST class is just an abstract
-/// base class for all possible nodes of our AST, this is just an empty destructor.
-ExprAST::~ExprAST() {}
-
 /// The constructor for the NumberExprAST class. This constructor just takes a single
 /// parameter: the numeric value that this node of the AST represents.
 NumberExprAST::NumberExprAST(double Val) : Val(Val) {}

@@ -1,11 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <unordered_map>
-
 #include "ast.h"
-
-static std::unordered_map<char, int> BinopPrecedence;	// This holds the precedence for each binary operator that is defined
 
 // The lexer returns tokens [0-255] if it is an unknown character, otherwise one
 // of these for known things.
@@ -39,7 +35,24 @@ enum Token {
 ///
 /// @return an integer, either an enum Token if the lexed token is a recognized token,
 ///         or the ASCII value of the first character read
-int gettok();
+static int gettok();
+
+/// Get the next token as lexed by gettok(), updating the internal token buffer.
+/// When getting the next token, this funcion should be preferred to gettok()
+/// since gettok() does not update the internal token buffer, and getting
+/// the internal token buffer out of sync with the parser state could lead
+/// to all sorts of trouble.
+///
+/// @return the next token lexed by gettok()
+int getNextToken();
+
+/// Update the internal binary operator precedence table with the appropriate
+/// values.
+///
+/// This function should be called before parsing any expressions involving
+/// binary operators as parsing such expressions relies on the internal
+/// binary operator precedence table being properly filled in.
+void SetupBinopPrecedences();
 
 /// Transform the floating point number tokenized by gettok() into an AST node that
 /// represents a numerical expression.
@@ -193,5 +206,14 @@ static std::unique_ptr<PrototypeAST> ParseExtern();
 /// @return an AST node for a complete function definition containing an expression that is parsed at
 ///         the top-level, i.e. outside of a function
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr();
+
+/// Run a REPL for interpreting expressions. This function runs an interactive
+/// prompt in an infinite loop while there are still tokens to lex/parse.
+///
+/// The prompt given to the user can be contolled by the 'ProgName' parameter.
+///
+/// @param ProgName the name of the program do display to the user in the
+///                 interactive REPL
+void MainLoop(const char *ProgName);
 
 #endif

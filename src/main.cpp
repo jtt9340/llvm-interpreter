@@ -1,11 +1,17 @@
-#include "lexer.h"
+#include <cstdio>  // std::fprintf
 
-int main() {
-	// Create the binary operators, specifying their precedences.
-	// The lower the number, the lower the precedence.
-	// TODO: Add more binary operators
-	BinopPrecedence['<'] = 10; // Lowest precedence
-	BinopPrecedence['+'] = 20;
-	BinopPrecedence['-'] = 20;
-	BinopPrecedence['*'] = 40; // Highest precedence
+#include "lexer.h" // SetupBinopPrecedences, getNextToken, MainLoop
+
+int main(int argc, const char **argv) {
+	const char *argv0 = argv[0];
+	SetupBinopPrecedences();
+
+	// Get ready to parse the first token.
+	std::fprintf(stderr, "%s> ", argv0);
+	getNextToken();
+
+	// Run the REPL now.
+	MainLoop(argv0);
+
+	return 0;
 }

@@ -7,7 +7,9 @@
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
 public:
-	virtual ~ExprAST();
+	/// The destructor for the ExprAST class. Since ther ExprAST class is just an abstract
+	/// base class for all possible nodes of our AST, this is just an empty destructor.
+	virtual ~ExprAST() = default;
 };
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
