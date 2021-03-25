@@ -1,8 +1,10 @@
 #ifndef AST_H
 #define AST_H
 
-#include <string> // std::string
-#include <vector> // std::vector
+#include <llvm/IR/Value.h> // llvm::Value
+
+#include <string>          // std::string
+#include <vector>          // std::vector
 
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
@@ -10,6 +12,9 @@ public:
 	/// The destructor for the ExprAST class. Since ther ExprAST class is just an abstract
 	/// base class for all possible nodes of our AST, this is just an empty destructor.
 	virtual ~ExprAST() = default;
+
+	/// Generate LLVM IR for this AST node and all dependent AST nodes.
+	virtual llvm::Value *codegen() = 0;
 };
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
@@ -19,6 +24,8 @@ class NumberExprAST : public ExprAST {
 
 public:
 	NumberExprAST(double Val);
+
+	virtual llvm::Value *codegen();
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -28,6 +35,8 @@ class VariableExprAST : public ExprAST {
 
 public:
 	VariableExprAST(const std::string &Name);
+
+	virtual llvm::Value *codegen();
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
@@ -40,6 +49,8 @@ class BinaryExprAST : public ExprAST {
 public:
 	BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
 			std::unique_ptr<ExprAST> RHS);
+
+	virtual llvm::Value *codegen();
 };
 
 /// CallExprAST - Expression class for function calls.
@@ -52,6 +63,8 @@ class CallExprAST : public ExprAST {
 public:
 	CallExprAST(const std::string &Callee,
 			std::vector<std::unique_ptr<ExprAST>> Args);
+
+	virtual llvm::Value *codegen();
 };
 
 /// PrototypeAST - This class represents the "Prototype" for a function,
@@ -67,6 +80,8 @@ public:
 	PrototypeAST(const std::string &Name, std::vector<std::string> Args);
 
 	const std::string &getName() const;
+
+	virtual llvm::Value *codegen();
 };
 
 /// FunctionAST - a function prototype coupled with the code of the function
@@ -80,5 +95,7 @@ class FunctionAST {
 public:
 	FunctionAST(std::unique_ptr<PrototypeAST> Proto,
 			std::unique_ptr<ExprAST> Body);
+
+	virtual llvm::Value *codegen();
 };
 #endif

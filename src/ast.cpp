@@ -1,4 +1,15 @@
+#include <llvm/IR/LLVMContext.h> // llvm::LLVMContext
+#include <llvm/IR/IRBuilder.h>   // llvm::IRBuilder
+#include <llvm/IR/Module.h>      // llvm::Module
+
+#include <unordered_map>         // std::unordered_map
+
 #include "ast.h"
+
+static llvm::LLVMContext Context;
+static llvm::IRBuilder<> Builder(Context);
+static std::unique_ptr<llvm::Module> Module;
+static std::unordered_map<std::string, llvm::Value *> NamedValues;
 
 /// The constructor for the NumberExprAST class. This constructor just takes a single
 /// parameter: the numeric value that this node of the AST represents.
