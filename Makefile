@@ -8,7 +8,7 @@ CXX =	clang++
 CFLAGS = -Wall -Wextra -pedantic -pipe 
 CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core)
 
-ifneq ($(shell whence brew >/dev/null 2>&1 && brew ls --versions llvm),)
+ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm),)
 	# Use the libc++ bundled with Homebrew
 	CPPFLAGS =	-I/usr/local/opt/llvm/include
 	LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
