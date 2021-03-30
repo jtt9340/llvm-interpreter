@@ -25,7 +25,7 @@ class NumberExprAST : public ExprAST {
 public:
 	NumberExprAST(double Val);
 
-	virtual llvm::Value *codegen();
+	llvm::Value *codegen() override;
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -36,7 +36,7 @@ class VariableExprAST : public ExprAST {
 public:
 	VariableExprAST(const std::string &Name);
 
-	virtual llvm::Value *codegen();
+	llvm::Value *codegen() override;
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
@@ -50,7 +50,7 @@ public:
 	BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
 			std::unique_ptr<ExprAST> RHS);
 
-	virtual llvm::Value *codegen();
+	llvm::Value *codegen() override;
 };
 
 /// CallExprAST - Expression class for function calls.
@@ -64,7 +64,7 @@ public:
 	CallExprAST(const std::string &Callee,
 			std::vector<std::unique_ptr<ExprAST>> Args);
 
-	virtual llvm::Value *codegen();
+	llvm::Value *codegen() override;
 };
 
 /// PrototypeAST - This class represents the "Prototype" for a function,
@@ -81,7 +81,7 @@ public:
 
 	const std::string &getName() const;
 
-	virtual llvm::Value *codegen();
+	llvm::Function *codegen();
 };
 
 /// FunctionAST - a function prototype coupled with the code of the function
@@ -96,6 +96,6 @@ public:
 	FunctionAST(std::unique_ptr<PrototypeAST> Proto,
 			std::unique_ptr<ExprAST> Body);
 
-	virtual llvm::Value *codegen();
+	llvm::Function *codegen();
 };
 #endif

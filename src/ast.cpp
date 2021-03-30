@@ -1,6 +1,7 @@
 #include <llvm/IR/LLVMContext.h> // llvm::LLVMContext
 #include <llvm/IR/IRBuilder.h>   // llvm::IRBuilder
 #include <llvm/IR/Module.h>      // llvm::Module
+#include <llvm/IR/verifier.h>    // llvm::verifyFunction
 
 #include <unordered_map>         // std::unordered_map
 #include <sstream>               // std::ostringstream
@@ -130,9 +131,94 @@ PrototypeAST::PrototypeAST(const std::string &Name, std::vector<std::string> Arg
 /// Getter for the "Name" field of instances of PrototypeAST.
 const std::string &PrototypeAST::getName() const { return Name; }
 
+llvm::Function *PrototypeAST::codegen() {
+	// All arguments to functions in our language are doubles so create a vector
+	// of "N" LLVM double types where N is the number of arguments in the function
+	// prototype
+	std::vector<llvm::Type *> Doubles(Args.size(),
+			llvm::Type::getDoubleTy(Context));
+
+	// Create a function type that returns a double (the first parameter to
+	// FunctionType::get), takes Doubles.size() number of arguments, each
+	// of type double (the second parameter to FunctionType::get), and is
+	// not vararg (the false parameter to FunctionType::get).
+	llvm::FunctionType *FT =
+		llvm::FunctionType::get(llvm::Type::getDoubleTy(Context), Doubles, false);
+
+	// Actually generate the LLVM IR from the function type above.
+	// External linkage means the function can be defined outside of this module.
+	llvm::Function *F =
+		llvm::Function::Create(FT, llvm::Function::ExternalLinkage, Name, Module.get());
+
+	// Optional but helpful: set all of the names of 
+	// of the function arguments in the LLVM IR to the user-specified names for clarity.
+	unsigned Idx = 0;
+	for (auto &Arg : F->args())
+		Arg.setName(Args[Idx++]);
+
+	return F;
+}
+
 /// The constructor for the FunctionAST class. This constructor takes in the
 /// funciton prototype part of this function definition followed by the
 /// code that defines the behavior of the function.
 FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
 		std::unique_ptr<ExprAST> Body)
 	: Proto(std::move(Proto)), Body(std::move(Body)) {}
+
+llvm::Function *FunctionAST::codegen() {
+	// Check for an existing function made by an 'extern' declaration.
+	llvm::Function *Function = Module->getFunction(Proto->getName());
+	// If an existing declaration wasn't found then generate the LLVM IR
+	// for it.
+	if (!Function) Function = Proto->codegen();
+	// If that failed for some reason, return a nullptr.
+	if (!Function) return nullptr;
+	// TODO Supposedly there is a bug in this function where an existing
+	// LLVM IR function definition does not validate its signature against
+	// its own prototype which can cause codegen to fail when an earlier
+	// function's prototype does not match the definition. I don't really
+	// see what the bug is here but I will have to come back and think
+	// about this one.
+
+	// If an existing declaration was found and contains a definiton, then
+	// we are trying to redefine an extern function which isn't allowed in
+	// our language.
+	if (!Function->empty()) {
+		std::ostringstream errMsg("Function ");
+		errMsg << Proto->getName() << " cannot be redefined";
+		return static_cast<llvm::Function *>(LogErrorV(errMsg.str().c_str()));
+	}
+
+	// A basic block is a block of code with only one extry point and only one
+	// exit point and no branching. They compose the nodes of a control flow graph.
+	//
+	// "entry" allows us to label the LLVM IR with where functions begin for easier
+	// reading. We pass the Function parameter to indicate to start this basic block
+	// at the end of the function were are codegen'ing.
+	llvm::BasicBlock *BB = llvm::BasicBlock::Create(Context, "entry", Function);
+	Builder.SetInsertPoint(BB);
+
+	// Record the function arguments in the NamedValues map.
+	NamedValues.clear();
+	for (auto &Arg : Function->args())
+		NamedValues.emplace(Arg.getName(), &Arg);
+
+	// Generate the LLVM IR for the root expression of this function.
+	if (llvm::Value *RetVal = Body->codegen()) {
+		// If that succeeded, then create an LLVM ret instruction to
+		// return from the function...
+		Builder.CreateRet(RetVal);
+
+		// ...and validate the generated code, checking for consistency.
+		llvm::verifyFunction(*Function);
+
+		return Function;
+	}
+	// Otherwise, generating the LLVM IR for the root expression failed,
+	// so remove the function from the symbol table, which allows the user
+	// to redefine it. Otherwise, the namespace would be polluted with
+	// a faulty function.
+	Function->eraseFromParent();
+	return nullptr;
+}
