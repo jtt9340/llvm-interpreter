@@ -75,13 +75,12 @@ $(RELDIR)/%.o:	src/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
 
 #
-# Example rules - is there a cleaner way to write this part of the makefile?
+# Example rules
 #
 examples:	$(patsubst $(EXAMPLEDIR)/%.cpp,$(DBGDIR)/%,$(wildcard $(EXAMPLEDIR)/*.cpp))
 
 $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
-	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o) $<
-	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $(<:$(EXAMPLEDIR)/%.cpp=$(EXAMPLEDIR)/%.o) $(EXAMPLEOBJS)
+	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $^
 
 #
 # Other rules
