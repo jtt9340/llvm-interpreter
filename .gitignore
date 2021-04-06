@@ -3,6 +3,7 @@ target/
 *.o
 *.so
 *.dylib
+*.dSYM
 
 # Used for creating test programs and other one-off programs
 scratch/

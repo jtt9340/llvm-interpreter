@@ -15,7 +15,7 @@ regex='number \(-[[:digit:]]\)'
 if [[ -n $1 ]]; then
   exe=($1)
 else
-  exe=($(find . -name $exe_name))
+  exe=($(find . -type d \( -path examples -o -path '*.dSYM' \) -prune -false -o -name $exe_name))
 fi
 
 case ${#exe[@]} in
