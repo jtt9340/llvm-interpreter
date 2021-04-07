@@ -3,7 +3,7 @@
 #include "../src/lexer.h"
 
 int main() {
-	const int tok = gettok();
+	const int tok = getNextToken();
 	switch (tok) {
 	case tok_eof:
 		std::cout << "EOF (" << tok_eof << ')';
