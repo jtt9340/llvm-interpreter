@@ -2,9 +2,12 @@
 #include <cstring>		// std::strlen
 
 #include <cctype>		// std::isspace, std::isalpha, std::isalnum, std::isdigit
-#include <cstdio>		// std::getchar, std::fprintf, EOF
+#include <cstdio>		// std::getchar, EOF
 #include <cstdlib>		// std::strtod
+#include <iostream>     // std::cerr, std::endl
 #include <unordered_map>// std::unordered_map
+
+#include <llvm/IR/Function.h> // llvm::Function
 
 #include "ast.h"		// class ExprAST, class NumberExprAST, class VariableExprAST,
 				// class BinaryExprAST, class CallExprAST, class PrototypeAST, class FunctionAST
@@ -22,9 +25,9 @@ static std::unordered_map<char, int> BinopPrecedence; // This holds the preceden
 /// token from the lexer and updates CurTok with its results.
 static int CurTok;
 int getNextToken() {
-  // gettok() is forward-declared in lexer.h so we can call it here even
-  // though the definition does not appear until below
-  return CurTok = gettok();
+	// gettok() is forward-declared in lexer.h so we can call it here even
+	// though the definition does not appear until below
+	return CurTok = gettok();
 }
 
 void SetupBinopPrecedences() {
@@ -311,8 +314,14 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
 }
 
 static void HandleDefinition() {
-	if (ParseDefinition()) {
-		std::fprintf(stderr, "Parsed a function definition.\n");
+	const auto defn = ParseDefinition();
+	if (defn) {
+		const auto *ir = defn->codegen();
+		if (ir) {
+			std::cerr << "Generate LLVM IR for function definition:" << std::endl;
+			ir->print(llvm::errs());
+			std::cerr << std::endl;
+		}
 	} else {
 		// Skip token to handle errors.
 		getNextToken();
@@ -320,8 +329,14 @@ static void HandleDefinition() {
 }
 
 static void HandleExtern() {
-	if (ParseExtern()) {
-		std::fprintf(stderr, "Parsed an extern function declaration.\n");
+	const auto externDeclaration = ParseExtern();
+	if (externDeclaration) {
+		const auto* ir = externDeclaration->codegen();
+		if (ir) {
+			std::cerr << "Generate LLVM IR for extern function declaration:" << std::endl;
+			ir->print(llvm::errs());
+			std::cerr << std::endl;
+		}
 	} else {
 		// Skip token to handle errors.
 		getNextToken();
@@ -330,8 +345,14 @@ static void HandleExtern() {
 
 static void HandleTopLevelExpression() {
 	// Evaluate a top-level expression in an anonymous function.
-	if (ParseTopLevelExpr()) {
-		std::fprintf(stderr, "Parsed a top-level expression\n");
+	const auto expr = ParseTopLevelExpr();
+	if (expr) {
+		const auto *ir = expr->codegen();
+		if (ir) {
+			std::cerr << "Generate LLVM IR for top-level expression:" << std::endl;
+			ir->print(llvm::errs());
+			std::cerr << std::endl;
+		}
 	} else {
 		// Skip token to handle errors.
 		getNextToken();
@@ -341,7 +362,7 @@ static void HandleTopLevelExpression() {
 /// top ::= definition | external | expression | ';'
 void MainLoop(const char *ProgName) {
 	loop {
-		std::fprintf(stderr, "%s> ", ProgName);
+		std::cerr << ProgName << "> ";
 		switch (CurTok) {
 		case tok_eof:
 			return;

@@ -11,7 +11,7 @@
 
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
-static std::unique_ptr<llvm::Module> Module;
+static std::unique_ptr<llvm::Module> Module = std::make_unique<llvm::Module>("Kaleidescope", Context);
 static std::unordered_map<std::string, llvm::Value *> NamedValues;
 
 /// The constructor for the NumberExprAST class. This constructor just takes a single
@@ -35,7 +35,7 @@ llvm::Value *VariableExprAST::codegen() {
 	llvm::Value *V = NamedValues[Name];
 
 	if (!V) {
-		std::ostringstream errMsg("Unknown variable name: ");
+		std::ostringstream errMsg("Unknown variable name: ", std::ios_base::ate);
 		errMsg << Name;
 		LogErrorV(errMsg.str().c_str());
 	}
@@ -81,7 +81,7 @@ llvm::Value *BinaryExprAST::codegen() {
 		// Convert boolean 0/1 to double 0.0 or 1.0
 		return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
 	default:
-		std::ostringstream errMsg("unrecognized binary operator: ");
+		std::ostringstream errMsg("unrecognized binary operator: ", std::ios_base::ate);
 		errMsg << Op;
 		return LogErrorV(errMsg.str().c_str());
 	}
@@ -185,7 +185,7 @@ llvm::Function *FunctionAST::codegen() {
 	// we are trying to redefine an extern function which isn't allowed in
 	// our language.
 	if (!Function->empty()) {
-		std::ostringstream errMsg("Function ");
+		std::ostringstream errMsg("Function ", std::ios_base::ate);
 		errMsg << Proto->getName() << " cannot be redefined";
 		return static_cast<llvm::Function *>(LogErrorV(errMsg.str().c_str()));
 	}
