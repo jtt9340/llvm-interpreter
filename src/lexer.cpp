@@ -63,13 +63,24 @@ static int gettok() {
 
 	// Parse numeric values and store them in NumVal
 	std::string NumStr;
+	
+	// Handle negative numbers
+	if (LastChar == '-') {
+		NumStr += LastChar;
+		LastChar = std::getchar();
+	}
+
 	if (LastChar == '.') {
 		// If the numeric value started with a '.', then we must accept at least one number
 		// and can only accept numbers
-		do {
+		loop {
 			NumStr += LastChar;
 			LastChar = std::getchar();
-		} while (std::isdigit(LastChar));
+			if (std::isspace(LastChar))
+				break;
+			else if (!std::isdigit(LastChar))
+				return tok_err;
+		}
 
 		// Additional byte storage for the parts of NumStr that couldn't be parsed as a number
 		// Used to indicate an invalid number token
@@ -88,17 +99,21 @@ static int gettok() {
 		bool DecimalPointFound = false;
 		
 		// Read either numbers or .'s until one . is found
-		do {
+		loop {
 			NumStr += LastChar;
 			LastChar = std::getchar();
 			if (!DecimalPointFound && LastChar == '.') {
 				// This is our first decimal point so we accept it
 				DecimalPointFound = true;
-			} else if (LastChar == '.') {
-				// This is not our first decomal point so this is an error
+			} else if (std::isspace(LastChar)) {
+				// We reached the end of the number literal
+				break;
+			} else if (!std::isdigit(LastChar)) {
+				// This is not our first decimal point
+				// or we encountered not a digit so this is an error
 				return tok_err;
 			}
-		} while (std::isdigit(LastChar) || LastChar == '.');
+		}
 
 		NumVal = std::strtod(NumStr.c_str(), 0);
 		return tok_number;

@@ -10,7 +10,8 @@ set -e
 exe_name=lexer
 
 # If the output of the above binary every changes, then this will have to change
-regex='number \(-[[:digit:]]\)'
+number_regex='number \(-[[:digit:]]\)'
+unrecognized_token_regex='unrecognized token .+ \([[:digit:]]+\)'
 
 if [[ -n $1 ]]; then
   exe=($1)
@@ -49,7 +50,7 @@ function do_test() {
   # Because $exe might exit with a non-zero return status which
   # causes this script to silently fail
   set +e
-  output=$(echo $input | $exe 2>&1)
+  output=$(printf -- "$input\n" | $exe 2>&1)
   set -e
   if [[ ! $output =~ $expr ]]; then
     echo Unexpected output for input $input >&2
@@ -60,16 +61,16 @@ function do_test() {
 }
 
 # Positive path: these cases should work
-for input in 1 1.2 23423.3498435793 0.0001 238. .7839; do
-  # Run the tests in parallel with &
-  do_test "$input" "$regex" &
+for input in 1 1.2 23423.3498435793 0.0001 238. .7839 -30 -78.2 -.12 -0.12; do
+  do_test "$input" "$number_regex"
 done
 
 # Negative path: these cases should fail
-for input in .; do
-  # Run the tests in parallel with &
-  do_test "$input" 'invalid token' &
+for input in . -.12- 45.- 7-8-9 1hello .PHONY; do
+  do_test "$input" 'invalid token'
 done
+ 
+do_test - "$unrecognized_token_regex"
 
 wait # Wait for pending unit tests to finish
 echo "Passed! ($exe)"
