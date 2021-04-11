@@ -35,9 +35,11 @@ void SetupBinopPrecedences() {
 	// The lower the number, the lower the precedence.
 	// TODO: Add more binary operators
 	BinopPrecedence['<'] = 10; // Lowest precedence
+	BinopPrecedence['>'] = 10;
 	BinopPrecedence['+'] = 20;
 	BinopPrecedence['-'] = 20;
-	BinopPrecedence['*'] = 40; // Highest precedence
+	BinopPrecedence['*'] = 40;
+	BinopPrecedence['/'] = 40; // Highest precedence
 }
 
 // gettok - Return the next token from standard input.

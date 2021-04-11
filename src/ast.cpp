@@ -68,6 +68,8 @@ llvm::Value *BinaryExprAST::codegen() {
 		return Builder.CreateFSub(L, R, "subtmp");
 	case '*':
 		return Builder.CreateFMul(L, R, "multmp");
+	case '/':
+		return Builder.CreateFDiv(L, R, "divtmp");
 	case '<':
 		// fcmp ult is an instruction that always returns a 1-bit integer,
 		//     1 if the first operand is strictly less than the second,
@@ -75,10 +77,13 @@ llvm::Value *BinaryExprAST::codegen() {
 		// taking into account floating-point NaN (we would use fcmp olt if the operands
 		// being compared followed a total ordering, i.e. didn't have the concept of NaN)
 		// but since our programming language only supports double-precision floating point
-		// numbers, we need to convert the result of fcmp olt to a double using uitofp
+		// numbers, we need to convert the result of fcmp ult to a double using uitofp
 		// (unsigned integer to floating-point)
-		L = Builder.CreateFCmpULT(L, R, "cmptmp");
+		L = Builder.CreateFCmpULT(L, R, "cmpulttmp");
 		// Convert boolean 0/1 to double 0.0 or 1.0
+		return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
+	case '>':
+		L = Builder.CreateFCmpUGT(L, R, "cmpugttmp");
 		return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
 	default:
 		std::ostringstream errMsg("unrecognized binary operator: ", std::ios_base::ate);
