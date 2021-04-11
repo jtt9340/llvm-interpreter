@@ -75,14 +75,14 @@ static int gettok() {
 	if (LastChar == '.') {
 		// If the numeric value started with a '.', then we must accept at least one number
 		// and can only accept numbers
-		loop {
+		do {
 			NumStr += LastChar;
 			LastChar = std::getchar();
-			if (std::isspace(LastChar) || LastChar == ';')
-				break;
-			else if (!std::isdigit(LastChar))
-				return tok_err;
-		}
+		} while (std::isdigit(LastChar));
+
+		// It is an error to have a letter immediately follow a number
+		if (std::isalpha(LastChar))
+			return tok_err;
 
 		// Additional byte storage for the parts of NumStr that couldn't be parsed as a number
 		// Used to indicate an invalid number token
@@ -101,21 +101,21 @@ static int gettok() {
 		bool DecimalPointFound = false;
 		
 		// Read either numbers or .'s until one . is found
-		loop {
+		do {
 			NumStr += LastChar;
 			LastChar = std::getchar();
 			if (!DecimalPointFound && LastChar == '.') {
 				// This is our first decimal point so we accept it
 				DecimalPointFound = true;
-			} else if (std::isspace(LastChar) || LastChar == ';') {
-				// We reached the end of the number literal
-				break;
-			} else if (!std::isdigit(LastChar)) {
-				// This is not our first decimal point
-				// or we encountered not a digit so this is an error
+			} else if (LastChar == '.') {
+				// This is not our first decimal point so this is an error
 				return tok_err;
 			}
-		}
+		} while (std::isdigit(LastChar) || LastChar == '.');
+		
+		// It is an error to have a letter immediately follow a number
+		if (std::isalpha(LastChar))
+			return tok_err;
 
 		NumVal = std::strtod(NumStr.c_str(), 0);
 		return tok_number;
