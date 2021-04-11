@@ -65,12 +65,14 @@ static int gettok() {
 
 	// Parse numeric values and store them in NumVal
 	std::string NumStr;
-	
-	// Handle negative numbers
-	if (LastChar == '-') {
-		NumStr += LastChar;
-		LastChar = std::getchar();
-	}
+
+	/*	
+		// TODO: Handle negative numbers
+		if (LastChar == '-') {
+			NumStr += LastChar;
+			LastChar = std::getchar();
+		}
+	*/
 
 	if (LastChar == '.') {
 		// If the numeric value started with a '.', then we must accept at least one number
