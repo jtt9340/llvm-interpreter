@@ -78,7 +78,7 @@ static int gettok() {
 		loop {
 			NumStr += LastChar;
 			LastChar = std::getchar();
-			if (std::isspace(LastChar))
+			if (std::isspace(LastChar) || LastChar == ';')
 				break;
 			else if (!std::isdigit(LastChar))
 				return tok_err;
@@ -107,7 +107,7 @@ static int gettok() {
 			if (!DecimalPointFound && LastChar == '.') {
 				// This is our first decimal point so we accept it
 				DecimalPointFound = true;
-			} else if (std::isspace(LastChar)) {
+			} else if (std::isspace(LastChar) || LastChar == ';') {
 				// We reached the end of the number literal
 				break;
 			} else if (!std::isdigit(LastChar)) {
