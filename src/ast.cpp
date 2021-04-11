@@ -239,7 +239,7 @@ llvm::Function *FunctionAST::codegen() {
 
 void InitializeModuleAndPassManager() {
 	// Open a new module.
-	Module = std::make_unique<llvm::Module>("Kaleidescope", Context);
+	Module = std::make_unique<llvm::Module>("Kaleidoscope", Context);
 
 	// Create a new pass manager attached to it. We are using a function pass manager, which
 	// passes over code at the function level, looking for optimizations.

@@ -21,7 +21,7 @@ endif
 # Update this variable as more files are added to the project
 SRCS =	src/ast.cpp src/lexer.cpp src/logging.cpp src/main.cpp
 OBJS =	$(SRCS:src/%.cpp=%.o)
-EXE =	kaleidescope
+EXE =	kaleidoscope
 
 #
 # Debug build settings

@@ -6,7 +6,7 @@ set -e
 
 # If the name of the resulting binary changes, then this will have to change
 # The exe name can also be passed as an argument to this script:
-# test/lexer.sh target/release/kaleidescope
+# test/lexer.sh target/release/kaleidoscope
 exe_name=lexer
 
 # If the output of the above binary every changes, then this will have to change
