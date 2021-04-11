@@ -98,4 +98,12 @@ public:
 
 	llvm::Function *codegen();
 };
+
+/// Set up the internal module for the interpreter and initialize all
+/// optimizations.
+///
+/// This function should be called before running the interpreter. It
+/// will enable optimizations for generated function code and initialize
+/// the LLVM module to store symbol names.
+void InitializeModuleAndPassManager();
 #endif

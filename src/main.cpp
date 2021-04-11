@@ -5,6 +5,7 @@
 int main(int argc, const char **argv) {
 	const char *argv0 = argv[0];
 	SetupBinopPrecedences();
+	InitializeModuleAndPassManager();
 
 	// Get ready to parse the first token.
 	std::fprintf(stderr, "%s> ", argv0);

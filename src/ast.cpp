@@ -2,6 +2,11 @@
 #include <llvm/IR/IRBuilder.h>   // llvm::IRBuilder
 #include <llvm/IR/Module.h>      // llvm::Module
 #include <llvm/IR/verifier.h>    // llvm::verifyFunction
+#include <llvm/IR/LegacyPassManager.h>               // llvm::legacy::FunctionPassManager
+#include <llvm/Transforms/InstCombine/InstCombine.h> // llvm::createInstructionCombiningPass
+#include <llvm/Transforms/Scalar.h>                  // llvm::createReassociatePass
+#include <llvm/Transforms/Scalar/GVN.h>              // llvm::createGVNPass
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>      // llvm::createCFGSimplificationPass
 
 #include <unordered_map>         // std::unordered_map
 #include <sstream>               // std::ostringstream
@@ -11,8 +16,9 @@
 
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
-static std::unique_ptr<llvm::Module> Module = std::make_unique<llvm::Module>("Kaleidescope", Context);
+static std::unique_ptr<llvm::Module> Module;
 static std::unordered_map<std::string, llvm::Value *> NamedValues;
+static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager;
 
 /// The constructor for the NumberExprAST class. This constructor just takes a single
 /// parameter: the numeric value that this node of the AST represents.
@@ -218,6 +224,9 @@ llvm::Function *FunctionAST::codegen() {
 		// ...and validate the generated code, checking for consistency.
 		llvm::verifyFunction(*Function);
 
+		// Run optimizations on the generated code.
+		FunctionPassManager->run(*Function);
+
 		return Function;
 	}
 	// Otherwise, generating the LLVM IR for the root expression failed,
@@ -226,4 +235,29 @@ llvm::Function *FunctionAST::codegen() {
 	// a faulty function.
 	Function->eraseFromParent();
 	return nullptr;
+}
+
+void InitializeModuleAndPassManager() {
+	// Open a new module.
+	Module = std::make_unique<llvm::Module>("Kaleidescope", Context);
+
+	// Create a new pass manager attached to it. We are using a function pass manager, which
+	// passes over code at the function level, looking for optimizations.
+	FunctionPassManager = std::make_unique<llvm::legacy::FunctionPassManager>(Module.get());
+
+	// Isn't it crazy that all of these optimizations are built into LLVM and it's just a matter
+	// of "ooh pick this optimization"?
+
+	// Add an optimization that can combine obvious duplicate expressions, e.g.
+	// (1+2+x)*(x+2+1) becomes (x+3)*(x+3)
+	FunctionPassManager->add(llvm::createInstructionCombiningPass());
+	// Add an optimization to reorder expressions taking advantage of the commutative and
+	// associative properties, e.g. 4 + (x + 5) becomes x + (4 + 5) 
+	FunctionPassManager->add(llvm::createReassociatePass());
+	// Remove redundant expressions
+	FunctionPassManager->add(llvm::createGVNPass());
+	// CFG -> Control Flow Graph simplification, i.e. removing dead code, merging basic blocks, etc.
+	FunctionPassManager->add(llvm::createCFGSimplificationPass());
+	// Initialize all of the above passes.
+	FunctionPassManager->doInitialization();
 }
