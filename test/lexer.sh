@@ -11,6 +11,7 @@ exe_name=lexer
 
 # If the output of the above binary every changes, then this will have to change
 number_regex='number \(-[[:digit:]]\)'
+identifier_regex='identifier \(-[[:digit:]]\)'
 unrecognized_token_regex='unrecognized token .+ \([[:digit:]]+\)'
 
 if [[ -n $1 ]]; then
@@ -61,11 +62,19 @@ function do_test() {
 }
 
 # Positive path: these cases should work
+for input in hello getElementById get_or_else lets_MakeLots_Of_'$$$'; do
+  do_test "$input" "$identifier_regex"
+done
+
 for input in 1 1.2 23423.3498435793 0.0001 238. .7839 -30 -78.2 -.12 -0.12; do
   do_test "$input" "$number_regex"
 done
 
 # Negative path: these cases should fail
+for input in '!!' ^ \\ @; do
+  do_test "$input" "$unrecognized_token_regex"
+done
+
 for input in . -.12- 45.- 7-8-9 1hello .PHONY; do
   do_test "$input" 'invalid token'
 done

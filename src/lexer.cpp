@@ -51,9 +51,9 @@ static int gettok() {
 		LastChar = std::getchar();
 
 	// Parse identifier and specific keywords
-	if (std::isalpha(LastChar)) { // Identifier: [a-zA-Z][a-zA-Z0-9]*
+	if (std::isalpha(LastChar) || LastChar == '_' || LastChar == '$') { // Identifier: [a-zA-Z$_][a-zA-Z0-9$_]*
 		IdentifierStr = LastChar;
-		while (std::isalnum((LastChar = std::getchar())))
+		while ((LastChar = std::getchar()), std::isalnum(LastChar) || LastChar == '_' || LastChar == '$')
 			IdentifierStr += LastChar;
 
 		if (IdentifierStr == "def")
