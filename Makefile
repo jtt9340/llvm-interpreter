@@ -47,7 +47,7 @@ RELCFLAGS =	-O2 -DNDEBUG
 EXAMPLEDIR =	examples
 EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 
-.PHONY:	all clean realclean debug release prep remake examples
+.PHONY:	all clean realclean debug release prep remake test examples
 
 # Default build
 all:	prep release
@@ -87,6 +87,9 @@ $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 #
 prep:
 	mkdir -p $(DBGDIR) $(RELDIR)
+
+test:	examples
+	bash test/lexer.sh
 
 remake:	realclean all
 
