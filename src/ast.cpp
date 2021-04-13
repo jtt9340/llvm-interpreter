@@ -13,6 +13,7 @@
 
 #include "ast.h"
 #include "logging.h"             // LogErrorV
+#include "util.h"                // Module, JIT
 
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
@@ -240,6 +241,7 @@ llvm::Function *FunctionAST::codegen() {
 void InitializeModuleAndPassManager() {
 	// Open a new module.
 	Module = std::make_unique<llvm::Module>("Kaleidoscope", Context);
+	// Module->setDataLayout(JIT->getTargetMachine().createDataLayout());
 
 	// Create a new pass manager attached to it. We are using a function pass manager, which
 	// passes over code at the function level, looking for optimizations.

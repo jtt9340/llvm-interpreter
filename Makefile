@@ -6,7 +6,7 @@
 CC =	clang
 CXX =	clang++
 CFLAGS = -Wall -Wextra -pedantic -pipe 
-CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit)
+CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm),)
 	# Use the libc++ bundled with Homebrew
