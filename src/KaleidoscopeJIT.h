@@ -69,4 +69,6 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
+static std::unique_ptr<llvm::orc::KaleidoscopeJIT> JIT;
+
 #endif // LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H

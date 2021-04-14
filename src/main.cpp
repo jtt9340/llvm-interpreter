@@ -2,8 +2,8 @@
 
 #include <llvm/Support/TargetSelect.h> // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser 
 
-#include "util.h"  // JIT
-#include "lexer.h" // SetupBinopPrecedences, getNextToken, MainLoop
+#include "KaleidoscopeJIT.h"  // JIT
+#include "lexer.h"            // SetupBinopPrecedences, getNextToken, MainLoop
 
 using llvm::orc::KaleidoscopeJIT;
 

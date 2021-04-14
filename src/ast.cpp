@@ -13,7 +13,7 @@
 
 #include "ast.h"
 #include "logging.h"             // LogErrorV
-#include "util.h"                // Module, JIT
+#include "KaleidoscopeJIT.h"     // JIT
 
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
