@@ -15,8 +15,8 @@
 #include "logging.h"             // LogErrorV
 #include "KaleidoscopeJIT.h"     // JIT
 
-static llvm::LLVMContext Context;
-static llvm::IRBuilder<> Builder(Context);
+static std::unique_ptr<llvm::LLVMContext> Context;
+static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::unordered_map<std::string, llvm::Value *> NamedValues;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager;
@@ -29,7 +29,7 @@ NumberExprAST::NumberExprAST(double Val) : Val(Val) {}
 llvm::Value *NumberExprAST::codegen() {
 	// ConstantFP -> holds a compile-time floating point constant, represeted by a...
 	// APFloat -> Arbitrary Precision Float
-	return llvm::ConstantFP::get(Context, llvm::APFloat(Val));
+	return llvm::ConstantFP::get(*Context, llvm::APFloat(Val));
 }
 
 /// The constructor for the VariableExprAST class. This constructor just takes a single
@@ -70,13 +70,13 @@ llvm::Value *BinaryExprAST::codegen() {
 	// is an optional name to use in the generator instructions which makes
 	// reading the generated instructions a lot easier/
 	case '+':
-		return Builder.CreateFAdd(L, R, "addtmp");
+		return Builder->CreateFAdd(L, R, "addtmp");
 	case '-':
-		return Builder.CreateFSub(L, R, "subtmp");
+		return Builder->CreateFSub(L, R, "subtmp");
 	case '*':
-		return Builder.CreateFMul(L, R, "multmp");
+		return Builder->CreateFMul(L, R, "multmp");
 	case '/':
-		return Builder.CreateFDiv(L, R, "divtmp");
+		return Builder->CreateFDiv(L, R, "divtmp");
 	case '<':
 		// fcmp ult is an instruction that always returns a 1-bit integer,
 		//     1 if the first operand is strictly less than the second,
@@ -86,12 +86,12 @@ llvm::Value *BinaryExprAST::codegen() {
 		// but since our programming language only supports double-precision floating point
 		// numbers, we need to convert the result of fcmp ult to a double using uitofp
 		// (unsigned integer to floating-point)
-		L = Builder.CreateFCmpULT(L, R, "cmpulttmp");
+		L = Builder->CreateFCmpULT(L, R, "cmpulttmp");
 		// Convert boolean 0/1 to double 0.0 or 1.0
-		return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
+		return Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*Context), "booltmp");
 	case '>':
-		L = Builder.CreateFCmpUGT(L, R, "cmpugttmp");
-		return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
+		L = Builder->CreateFCmpUGT(L, R, "cmpugttmp");
+		return Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*Context), "booltmp");
 	default:
 		std::ostringstream errMsg("unrecognized binary operator: ", std::ios_base::ate);
 		errMsg << Op;
@@ -131,7 +131,7 @@ llvm::Value *CallExprAST::codegen() {
 		if (!ArgsV.back()) return nullptr;
 	}
 
-	return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+	return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
 }	
 
 /// The constructor for the PrototypeAST class. A function prototype names the function
@@ -148,14 +148,14 @@ llvm::Function *PrototypeAST::codegen() {
 	// of "N" LLVM double types where N is the number of arguments in the function
 	// prototype
 	std::vector<llvm::Type *> Doubles(Args.size(),
-			llvm::Type::getDoubleTy(Context));
+			llvm::Type::getDoubleTy(*Context));
 
 	// Create a function type that returns a double (the first parameter to
 	// FunctionType::get), takes Doubles.size() number of arguments, each
 	// of type double (the second parameter to FunctionType::get), and is
 	// not vararg (the false parameter to FunctionType::get).
 	llvm::FunctionType *FT =
-		llvm::FunctionType::get(llvm::Type::getDoubleTy(Context), Doubles, false);
+		llvm::FunctionType::get(llvm::Type::getDoubleTy(*Context), Doubles, false);
 
 	// Actually generate the LLVM IR from the function type above.
 	// External linkage means the function can be defined outside of this module.
@@ -208,8 +208,8 @@ llvm::Function *FunctionAST::codegen() {
 	// "entry" allows us to label the LLVM IR with where functions begin for easier
 	// reading. We pass the Function parameter to indicate to start this basic block
 	// at the end of the function were are codegen'ing.
-	llvm::BasicBlock *BB = llvm::BasicBlock::Create(Context, "entry", Function);
-	Builder.SetInsertPoint(BB);
+	llvm::BasicBlock *BB = llvm::BasicBlock::Create(*Context, "entry", Function);
+	Builder->SetInsertPoint(BB);
 
 	// Record the function arguments in the NamedValues map.
 	NamedValues.clear();
@@ -220,7 +220,7 @@ llvm::Function *FunctionAST::codegen() {
 	if (llvm::Value *RetVal = Body->codegen()) {
 		// If that succeeded, then create an LLVM ret instruction to
 		// return from the function...
-		Builder.CreateRet(RetVal);
+		Builder->CreateRet(RetVal);
 
 		// ...and validate the generated code, checking for consistency.
 		llvm::verifyFunction(*Function);
@@ -240,8 +240,11 @@ llvm::Function *FunctionAST::codegen() {
 
 void InitializeModuleAndPassManager() {
 	// Open a new module.
-	Module = std::make_unique<llvm::Module>("Kaleidoscope", Context);
+	Context = std::make_unique<llvm::LLVMContext>();
+	Module = std::make_unique<llvm::Module>("Kaleidoscope", *Context);
 	// Module->setDataLayout(JIT->getTargetMachine().createDataLayout());
+ 
+	Builder = std::make_unique<llvm::IRBuilder<>>(*Context);
 
 	// Create a new pass manager attached to it. We are using a function pass manager, which
 	// passes over code at the function level, looking for optimizations.
