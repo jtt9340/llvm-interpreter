@@ -88,8 +88,9 @@ $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 prep:
 	mkdir -p $(DBGDIR) $(RELDIR)
 
-test:	examples
+test:	debug examples
 	bash test/lexer.sh
+	$(DBGEXE) < test/kaleidoscope_input.txt
 
 remake:	realclean all
 
