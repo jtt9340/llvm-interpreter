@@ -29,7 +29,7 @@ EXE =	kaleidoscope
 DBGDIR =	target/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
-DBGCFLAGS =	-g -O1 -fsanitize=address -fno-omit-frame-pointer
+DBGCFLAGS =	-g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 # Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
 # DBGFLAGS += -fno-optimize-sibling-calls
 
