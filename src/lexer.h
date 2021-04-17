@@ -6,18 +6,38 @@
 // The lexer returns tokens [0-255] if it is an unknown character, otherwise one
 // of these for known things.
 enum Token {
+	/// EOF: We have reacted the end of the file
 	tok_eof = -1,
-	// An incorrect token as parsed
+	//. An incorrect token was parsed
 	tok_err = -2,
 
 	// commands
+	/// The "def" keyword
 	tok_def = -3,
+	/// The "extern" keyword
 	tok_extern = -4,
 
 	// primary
+	/// An identifier, such as a variable or function name
 	tok_identifier = -5,
+	/// A double-precision floating point number
 	tok_number = -6,
+
+	// control flow
+	/// The "if" keyword
+	tok_if = -7,
+	/// The "then" keyword
+	tok_then = -8,
+	/// The "else" keyword
+	tok_else = -9
 };
+
+/// Return a string representation of enum Token suitable for printing
+/// to the console. Think of this function as an override the the 'toString()'
+/// method in Java for the Token enum.
+///
+/// @return a string representation of the given token
+const std::string tokenToString(Token tok);
 
 /// Read from standard input until a token is read.
 ///

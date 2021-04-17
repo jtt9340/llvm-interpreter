@@ -2,6 +2,7 @@
 #include <llvm/IR/IRBuilder.h>   // llvm::IRBuilder
 #include <llvm/IR/Module.h>      // llvm::Module
 #include <llvm/IR/Verifier.h>    // llvm::verifyFunction
+#include <llvm/IR/Instructions.h>// llvm::PHINode
 #include <llvm/IR/LegacyPassManager.h>               // llvm::legacy::FunctionPassManager
 #include <llvm/Transforms/InstCombine/InstCombine.h> // llvm::createInstructionCombiningPass
 #include <llvm/Transforms/Scalar.h>                  // llvm::createReassociatePass
@@ -132,7 +133,72 @@ llvm::Value *CallExprAST::codegen() {
 	}
 
 	return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
-}	
+}
+
+/// The constructor for the IfExprAST class. An if expression contains three components:
+///
+/// 	1. A condition (Cond)
+/// 	2. A then-clause (Then)
+/// 	3. An else-clause (Else)
+///
+/// The else-clause is not optional. This makes the if expression more like an if expression
+/// in functional languages, where each branch of an if statement must evaluate to a value,
+/// or like a tenrary operator in more statement-oriented languages like C or Java.
+IfExprAST::IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
+		std::unique_ptr<ExprAST> Else)
+	: Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
+llvm::Value *IfExprAST::codegen() {
+	llvm::Value *CondV = Cond->codegen();
+	if (!CondV) return nullptr;
+	
+	// Convert Cond to a boolean by seeing if it is unequal to 0.0
+	CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(Context, llvm::APFloat(0.0)), "ifcond");
+
+	// Get the encompassing function containing the if expression. This
+	// is how we determine where to insert the then-clause.
+	// GetInsertBlock finds the current basic block,
+	// and getParent find the encompassing block, the function in this case.
+	llvm::Function *Function = Builder.GetInsertBlock()->getParent();
+	// Create basic blocks for the then and else clauses, then insert
+	// the then-clause at the end of the function.
+	llvm::BasicBlock *ThenBuildingBlock = llvm::BasicBlock::Create(Context, "then", Function);
+	llvm::BasicBlock *ElseBuildingBlock = llvm::BasicBlock::Create(Context, "else");
+	llvm::BasicBlock *Merged = llvm::BasicBlock::Create(Context, "ifcont");
+
+	Builder.CreateCondBr(CondV, ThenBuildingBlock, ElseBuildingBlock);
+
+	// Emit then-clause as LLVM IR.
+	Builder.SetInsertPoint(ThenBuildingBlock);
+
+	llvm::Value *ThenV = Then->codegen();
+	if (!ThenV) return nullptr;
+
+	Builder.CreateBr(Merged);
+	ThenBuildingBlock = Builder.GetInsertBlock();
+
+	// Emit else-clause as LLVM IR.
+	Function->getBasicBlockList().push_back(ElseBuildingBlock);
+	Builder.SetInsertPoint(ElseBuildingBlock);
+
+	llvm::Value *ElseV = Else->codegen();
+	if (!ElseV) return nullptr;
+
+	Builder.CreateBr(Merged);
+	ElseBuildingBlock = Builder.GetInsertBlock();
+
+	// Emit the merged basic block as LLVM IR. The merged
+	// block is where both execution paths will end up after the
+	// if expression. In the control flow graph, it is where each node
+	// if the if expression will point to next.
+	Function->getBasicBlockList().push_back(Merged);
+	Builder.SetInsertPoint(Merged);
+	llvm::PHINode *PhiNode = Builder.CreatePHI(llvm::Type::getDoubleTy(Context), 2, "iftmp");
+
+	PhiNode->addIncoming(ThenV, ThenBuildingBlock);
+	PhiNode->addIncoming(ElseV, ElseBuildingBlock);
+	return PhiNode;
+}
 
 /// The constructor for the PrototypeAST class. A function prototype names the function
 /// as well as the names of its arguments. This constructor takes the function name as

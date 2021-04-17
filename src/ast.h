@@ -67,6 +67,20 @@ public:
 	llvm::Value *codegen() override;
 };
 
+/// IfExprAST - Expression for if expressions (similar to C's ternary operator)
+class IfExprAST : public ExprAST {
+	std::unique_ptr<ExprAST> Cond; ///< The condition to evaluate
+	std::unique_ptr<ExprAST> Then; ///< The expression to evaluate if Cond evaluates to a non-zero value
+	std::unique_ptr<ExprAST> Else; ///< The expression to evaluate if Cond evalutates to 0.0
+
+public:
+	IfExprAST(std::unique_ptr<ExprAST> Cond,
+			std::unique_ptr<ExprAST> Then,
+			std::unique_ptr<ExprAST> Else);
+
+	llvm::Value *codegen() override;
+};
+
 /// PrototypeAST - This class represents the "Prototype" for a function,
 /// which captures its name and its argument names (which inadvertently
 /// captures the number of formal parameters for that function).

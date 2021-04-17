@@ -1,6 +1,5 @@
-#include <string>		// std::string
 #include <cstring>		// std::strlen
-
+#include <sstream>      // std::ostringstream
 #include <cctype>		// std::isspace, std::isalpha, std::isalnum, std::isdigit
 #include <cstdio>		// std::getchar, EOF
 #include <cstdlib>		// std::strtod
@@ -22,6 +21,43 @@ static double      NumVal;          // Filled in if tok_number
 const std::string &getIdentifierStr() { return IdentifierStr; }
 
 double getNumVal() { return NumVal; }
+
+const std::string tokenToString(Token tok) {
+	std::ostringstream output;
+	switch (tok) {
+	case tok_eof:
+		output << "EOF";
+		break;
+	case tok_err:
+		output << "invalid token";
+		break;
+	case tok_def:
+		output << "def";
+		break;
+	case tok_extern:
+		output << "extern";
+		break;
+	case tok_identifier:
+		output << "identifier";
+		break;
+	case tok_number:
+		output << "number";
+		break;
+	case tok_if:
+		output << "if";
+		break;
+	case tok_then:
+		output << "then";
+		break;
+	case tok_else:
+		output << "else";
+		break;
+	default:
+		output << "unrecognized token " << static_cast<char>(tok);
+	}
+ 	output << " (" << tok << ')';
+	return output.str();
+}
 
 /// CurTok/getNextToken - Provide a simple token buffer. CurTok is the
 /// current token the parser is looking at. getNextToken reads another

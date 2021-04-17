@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <sstream> // std::ostringstream
 
 #include "parser.h"
 #include "lexer.h"
@@ -91,6 +92,8 @@ std::unique_ptr<ExprAST> ParsePrimary() {
 		return ParseNumberExpr();
 	case '(':
 		return ParseParenExpr(); // An expression arbitrarily wrapped in parentheses
+	case tok_if:
+		return ParseIfExpr();
 	default:
 		return LogError("unknown token when expecting an expression");
 	}
@@ -197,6 +200,39 @@ std::unique_ptr<FunctionAST> ParseDefinition() {
 std::unique_ptr<PrototypeAST> ParseExtern() {
 	getNextToken(); // eat the 'extern' keyword
 	return ParsePrototype();
+}
+
+/// ifexpr ::= 'if' expression 'then' expression 'else' expression
+std::unique_ptr<ExprAST> ParseIfExpr() {
+	getNextToken(); // Assume CurTok is tok_if and consume it
+
+	// <cond>
+	auto Cond = ParseExpression();
+	if (!Cond) return nullptr;
+
+	if (getCurrentToken() != tok_then) {
+		std::ostringstream errMsg("Expected 'then' keyword but found ", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+	getNextToken(); // Consume 'then'
+
+	// <then>
+	auto Then = ParseExpression();
+	if (!Then) return nullptr;
+
+	if (getCurrentToken() != tok_else) {
+		std::ostringstream errMsg("Expected 'else' keyword but found ", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+	getNextToken(); // Consume 'else'
+
+	// <else>
+	auto Else = ParseExpression();
+	if (!Else) return nullptr;
+	
+	return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
 }
 
 /// toplevelexpr ::= expression

@@ -2,12 +2,29 @@
 
 3+4;
 
+10-5;
+
+6*8;
+
+1/2;
+
 extern sin(theta);
 
 def test(x)
 	(x+1+2)*(x+1+2);
 
 test(10);
+
+# The factorial function
+def factorial_helper(n acc)
+	if x < 1 then
+		acc
+	else
+		factorial_helper(n-1, acc*n);
+
+def factorial(n) factorial_helper(n, 1);
+
+factorial(4);
 
 1<2;
 

@@ -21,9 +21,9 @@ void SetupBinopPrecedences();
 ///
 ///         (1) gettok() should be called before calling this function to find get
 ///             the next numerical token in the source code
-///         (2) the user should check that gettok() indeed found a tok_number, or else
-///             the numerical value that this function will use to build the AST node
-///             will be inaccurate. 
+///         (2) the user should check that gettok() indeed found a tok_number, (can
+///             be determined with getNextToken()) or else the numerical value that
+///             this function will use to build the AST node will be inaccurate.
 ///
 /// @return an AST node wrapping a numerical value
 std::unique_ptr<ExprAST> ParseNumberExpr();
@@ -31,7 +31,7 @@ std::unique_ptr<ExprAST> ParseNumberExpr();
 /// Consume a '(' token, then another expression, and then another ')' token, and build
 /// an AST node representing the value in parenthesis.
 ///
-/// This function assumes the current token that was lexed by gettok() is an opening
+/// This function assumes the current token that was lexed by getNextToken() is an opening
 /// parenthesis. Then, it tries to find another expression to parse, returning a
 /// nullptr if there is not one. This would mean this function encountered an opening
 /// parenthesis but nothing after. Finally, it looks for a closing parenthesis, again
@@ -48,8 +48,8 @@ std::unique_ptr<ExprAST> ParseParenExpr();
 /// parenthesis follow the word, then it is a function call and the AST node returned
 /// represents this.
 ///
-/// This function assumes the current token that was lexed by gettok() is a tok_identifier,
-/// so it must only be called when gettok() returns tok_identifier.
+/// This function assumes the current token that was lexed by getNextToken() is a tok_identifier,
+/// so it must only be called when getNextToken() returns tok_identifier.
 ///
 /// @return an AST node represting either a variable reference or a function call
 std::unique_ptr<ExprAST> ParseIdentififerExpr();
@@ -61,13 +61,13 @@ std::unique_ptr<ExprAST> ParseIdentififerExpr();
 ///			(3) A numerical expression
 ///			(4) A parenthetical expression
 ///
-/// Based on the current token as returned by gettok(). This is a "top level" AST
+/// Based on the current token as returned by getNextToken(). This is a "top level" AST
 /// node builder that calls one of the other Parse* functions to create an AST node.
 ///
-/// @return an AST node based on the current token lexed by gettok() 
+/// @return an AST node based on the current token lexed by getNextToken() 
 std::unique_ptr<ExprAST> ParsePrimary();
 
-/// If the current token as returned by gettok() is a binary operator, return the
+/// If the current token as returned by getNextToken() is a binary operator, return the
 /// precedence of that operator, otherwise return -1.
 ///
 /// This function is used for implementing the order of operations, PEMDAS, when
@@ -76,7 +76,7 @@ std::unique_ptr<ExprAST> ParsePrimary();
 /// The higher the precedence, the higher priority that binary operator will have when
 /// being evaluated.
 ///
-/// @return the predence of the current binary operator stored in the token returned by gettok(),
+/// @return the predence of the current binary operator stored in the token returned by getNextToken(),
 ///         or -1 if the current token is not a valid binary operator
 int GetTokPrecedence();
 
@@ -122,7 +122,7 @@ std::unique_ptr<ExprAST> ParseExpression();
 ///
 /// And return an AST node that encapsulates this function prototype definition.
 ///
-/// This function expects the current token as returned by gettok() to be an identifier,
+/// This function expects the current token as returned by getNextToken() to be an identifier,
 /// or else this function will return a nullptr. This function will also return a nullprt
 /// if an opening parenthesis isn't found after the initial function name, and if a closing
 /// parenthesis isn't found.
@@ -136,7 +136,7 @@ std::unique_ptr<PrototypeAST> ParsePrototype();
 ///		def func_name(param1 param2) expr
 ///
 /// and return an AST node that encapsulates this function definition.
-/// This function expects the current token as returned by gettok() to be
+/// This function expects the current token as returned by getNextToken() to be
 /// tok_def, and returns a nullptr if the 'func_name(param1 param2)' portion
 /// or the expression ('expr') portion of a function is not present/parse-able.
 ///
@@ -148,13 +148,28 @@ std::unique_ptr<FunctionAST> ParseDefinition();
 
 /// Parse an extern function declaration, which is the 'extern' keyword followed by a function
 /// prototype definition, and return an AST node representing the function prototype. This function
-/// expects the current token as returned by gettok() to be tok_extern, then expects to parse
+/// expects the current token as returned by getNextToken() to be tok_extern, then expects to parse
 /// a function prototype definition as parsed by ParsePrototype.
 ///
 /// @return an AST node representing the function prototype definition for the parsed extern function
 ///         declaration, or nullptr if there are no opening or closing parenthesis as part of the
 ///         extern function declaration
 std::unique_ptr<PrototypeAST> ParseExtern();
+
+/// Parse an if expression, which is of the form
+///
+/// if <cond> then <then-clause> else <else-clause>;
+///
+/// <cond>, <then-clause>, and <else-clause> are all expressions. An AST node is
+/// returned that stores the AST node representations of <cond>, <then-clause>, and
+/// <else-clause>.
+///
+/// This function expects the current token as returned by getNextToken() to be tok_if, and
+/// returns nullptr if an if expression could not be parsed properly.
+///
+/// @return an AST node representing the parsed if expression, or nullptr if one could not be
+///         parsed
+std::unique_ptr<ExprAST> ParseIfExpr();
 
 /// Parse an expression declared outside of a function. This function exists to allow the user to
 /// interact with the interpreter using a REPL, and just creates an AST node for an anonymous function
