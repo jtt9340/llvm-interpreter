@@ -166,7 +166,7 @@ std::unique_ptr<PrototypeAST> ParsePrototype() {
 	if (getCurrentToken() != tok_identifier)
 		return LogErrorP("Expected function name in prototype");
 
-	const std::string &FnName = getIdentifierStr();
+	const std::string FnName = getIdentifierStr();
 	getNextToken(); // Eat the function name
 
 	if (getCurrentToken() != '(')
