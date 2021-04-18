@@ -336,26 +336,29 @@ FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
 llvm::Function *FunctionAST::codegen() {
 	// Check for an existing function made by an 'extern' declaration.
 	llvm::Function *Function = Module->getFunction(Proto->getName());
+	
+	// If an existing declaration was found and contains a definiton, then
+	// we are trying to redefine an extern function which isn't allowed in
+	// our language. (Except for the funciton named __anon_expr which is how
+	// we allow the user to redefine top level expressions in the REPL)
+	if (Function && !Function->empty() && Function->getName() != "__anon_expr") {
+		std::ostringstream errMsg("Function ", std::ios_base::ate);
+		errMsg << Proto->getName() << " cannot be redefined";
+		return static_cast<llvm::Function *>(LogErrorV(errMsg.str().c_str()));
+	}
+	
 	// If an existing declaration wasn't found then generate the LLVM IR
 	// for it.
-	if (!Function) Function = Proto->codegen();
+	Function = Proto->codegen();
 	// If that failed for some reason, return a nullptr.
 	if (!Function) return nullptr;
+	
 	// TODO Supposedly there is a bug in this function where an existing
 	// LLVM IR function definition does not validate its signature against
 	// its own prototype which can cause codegen to fail when an earlier
 	// function's prototype does not match the definition. I don't really
 	// see what the bug is here but I will have to come back and think
 	// about this one.
-
-	// If an existing declaration was found and contains a definiton, then
-	// we are trying to redefine an extern function which isn't allowed in
-	// our language.
-	if (!Function->empty()) {
-		std::ostringstream errMsg("Function ", std::ios_base::ate);
-		errMsg << Proto->getName() << " cannot be redefined";
-		return static_cast<llvm::Function *>(LogErrorV(errMsg.str().c_str()));
-	}
 
 	// A basic block is a block of code with only one extry point and only one
 	// exit point and no branching. They compose the nodes of a control flow graph.
