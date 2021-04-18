@@ -147,4 +147,13 @@ public:
 /// will enable optimizations for generated function code and initialize
 /// the LLVM module to store symbol names.
 void InitializeModuleAndPassManager();
+
+/// Search through the global llvm::Module for a function with the given name.
+/// If no such function exists, generate a new function declaration, or return
+/// nullptr if function code generation failed.
+///
+/// @param Name the name of the function to search for
+/// @returns a function with the given name, or nullptr if the function didn't
+///          exist and code generation for it failed
+llvm::Function *getFunction(const std::string &Name);
 #endif

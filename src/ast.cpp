@@ -27,6 +27,23 @@ static llvm::IRBuilder<> Builder(Context);
 static std::unique_ptr<llvm::Module> Module;
 static std::unordered_map<std::string, llvm::Value *> NamedValues;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager;
+static std::unordered_map<std::string, std::unique_ptr<PrototypeAST>> FunctionProtos;
+
+llvm::Function *getFunction(const std::string &Name) {
+	// See if the function with the given name has aready been added to
+	// the current module
+	if (auto *F = Module->getFunction(Name))
+		return F;
+
+	// If it hasn't, determine if we can codegen the declaration
+	// from a pre-existing prototype
+	auto FI = FunctionProtos.find(Name);
+	if (FI != FunctionProtos.end())
+		return FI->second->codegen();
+
+	// No existing prototype exists
+	return nullptr;
+}
 
 /// The constructor for the NumberExprAST class. This constructor just takes a single
 /// parameter: the numeric value that this node of the AST represents.
@@ -150,7 +167,7 @@ llvm::Value *CallExprAST::codegen() {
 	// A string stream for holding potential error messages.
 	std::ostringstream errMsg;
 	// Look up the function name in the global module table.
-	llvm::Function *CalleeF = Module->getFunction(Callee);
+	llvm::Function *CalleeF = getFunction(Callee);
 	if (!CalleeF) {
 		errMsg << "Unknown function referenced: " << Callee;
 		return LogErrorV(errMsg.str().c_str());
@@ -340,23 +357,10 @@ FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
 	: Proto(std::move(Proto)), Body(std::move(Body)) {}
 
 llvm::Function *FunctionAST::codegen() {
+	auto &P = *Proto;
+	FunctionProtos[Proto->getName()] = std::move(Proto);
 	// Check for an existing function made by an 'extern' declaration.
-	llvm::Function *Function = Module->getFunction(Proto->getName());
-	
-	// If an existing declaration was found and contains a definiton, then
-	// we are trying to redefine an extern function which isn't allowed in
-	// our language. (Except for the funciton named __anon_expr which is how
-	// we allow the user to redefine top level expressions in the REPL)
-	if (Function && !Function->empty() && Function->getName() != "__anon_expr") {
-		std::ostringstream errMsg("Function ", std::ios_base::ate);
-		errMsg << Proto->getName() << " cannot be redefined";
-		return static_cast<llvm::Function *>(LogErrorV(errMsg.str().c_str()));
-	}
-	
-	// If an existing declaration wasn't found then generate the LLVM IR
-	// for it.
-	Function = Proto->codegen();
-	// If that failed for some reason, return a nullptr.
+	llvm::Function *Function = getFunction(P.getName());
 	if (!Function) return nullptr;
 	
 	// TODO Supposedly there is a bug in this function where an existing
@@ -453,6 +457,8 @@ void HandleDefinition() {
 			std::cerr << "Generate LLVM IR for function definition:" << std::endl;
 			ir->print(llvm::errs());
 			std::cerr << std::endl;
+			KaleidoscopeJIT::getInstance()->addModule(std::move(Module));
+			InitializeModuleAndPassManager();
 		}
 	} else {
 		// Skip token to handle errors.
@@ -461,13 +467,14 @@ void HandleDefinition() {
 }
 
 void HandleExtern() {
-	const auto externDeclaration = ParseExtern();
+	auto externDeclaration = ParseExtern();
 	if (externDeclaration) {
 		const auto* ir = externDeclaration->codegen();
 		if (ir) {
 			std::cerr << "Generate LLVM IR for extern function declaration:" << std::endl;
 			ir->print(llvm::errs());
 			std::cerr << std::endl;
+			FunctionProtos[externDeclaration->getName()] = std::move(externDeclaration);
 		}
 	} else {
 		// Skip token to handle errors.

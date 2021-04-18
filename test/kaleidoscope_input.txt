@@ -9,6 +9,12 @@
 1/2;
 
 extern sin(theta);
+extern cos(theta);
+
+def unit_circle(theta)
+	sin(theta)*sin(theta) + cos(theta) * cos(theta);
+
+unit_circle(4.0);
 
 def test(x)
 	(x+1+2)*(x+1+2);
@@ -29,3 +35,10 @@ factorial(4);
 1<2;
 
 3>4;
+
+extern putchard(X);
+
+putchard(74);
+putchard(111);
+putchard(101);
+putchard(121);
