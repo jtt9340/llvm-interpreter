@@ -17,7 +17,7 @@ test(10);
 
 # The factorial function
 def factorial_helper(n acc)
-	if x < 1 then
+	if n < 1 then
 		acc
 	else
 		factorial_helper(n-1, acc*n);

@@ -46,7 +46,7 @@ std::unique_ptr<ExprAST> ParseParenExpr() {
 ///   ::= identifier                      Variable references.
 ///   ::= identifier '(' expression ')'   Function calls.
 std::unique_ptr<ExprAST> ParseIdentifierExpr() {
-	const std::string &IdName = getIdentifierStr();
+	const std::string IdName = getIdentifierStr();
 
 	getNextToken(); // Consume the identififer
 
