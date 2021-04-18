@@ -42,7 +42,11 @@ public:
   using ObjLayerT = LegacyRTDyldObjectLinkingLayer;
   using CompileLayerT = LegacyIRCompileLayer<ObjLayerT, SimpleCompiler>;
 
-  KaleidoscopeJIT();
+  KaleidoscopeJIT(KaleidoscopeJIT &) = delete;
+
+  void operator=(const KaleidoscopeJIT &) = delete;
+
+  static KaleidoscopeJIT *getInstance();
 
   TargetMachine &getTargetMachine();
 
@@ -53,6 +57,8 @@ public:
   JITSymbol findSymbol(const std::string Name);
 
 private:
+  KaleidoscopeJIT();
+
   std::string mangle(const std::string &Name);
 
   JITSymbol findMangledSymbol(const std::string &Name);
@@ -64,11 +70,11 @@ private:
   ObjLayerT ObjectLayer;
   CompileLayerT CompileLayer;
   std::vector<VModuleKey> ModuleKeys;
+
+  static std::unique_ptr<KaleidoscopeJIT> TheInstance;
 };
 
 } // end namespace orc
 } // end namespace llvm
-
-static std::unique_ptr<llvm::orc::KaleidoscopeJIT> JIT;
 
 #endif // LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H

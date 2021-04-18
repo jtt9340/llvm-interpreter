@@ -9,12 +9,18 @@
 #include <llvm/Transforms/Scalar/GVN.h>              // llvm::createGVNPass
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>      // llvm::createCFGSimplificationPass
 
+#include <cassert>               // assert
+#include <iostream>              // std::cerr, std::endl
 #include <unordered_map>         // std::unordered_map
 #include <sstream>               // std::ostringstream
 
 #include "ast.h"
+#include "lexer.h"
+#include "parser.h"
 #include "logging.h"             // LogErrorV
 #include "KaleidoscopeJIT.h"     // JIT
+
+using llvm::orc::KaleidoscopeJIT;
 
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
@@ -416,7 +422,7 @@ std::string FunctionAST::toString() {
 void InitializeModuleAndPassManager() {
 	// Open a new module.
 	Module = std::make_unique<llvm::Module>("Kaleidoscope", Context);
-	// Module->setDataLayout(JIT->getTargetMachine().createDataLayout());
+	Module->setDataLayout(KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
 	// Create a new pass manager attached to it. We are using a function pass manager, which
 	// passes over code at the function level, looking for optimizations.
@@ -437,4 +443,65 @@ void InitializeModuleAndPassManager() {
 	FunctionPassManager->add(llvm::createCFGSimplificationPass());
 	// Initialize all of the above passes.
 	FunctionPassManager->doInitialization();
+}
+
+void HandleDefinition() {
+	const auto defn = ParseDefinition();
+	if (defn) {
+		const auto *ir = defn->codegen();
+		if (ir) {
+			std::cerr << "Generate LLVM IR for function definition:" << std::endl;
+			ir->print(llvm::errs());
+			std::cerr << std::endl;
+		}
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
+}
+
+void HandleExtern() {
+	const auto externDeclaration = ParseExtern();
+	if (externDeclaration) {
+		const auto* ir = externDeclaration->codegen();
+		if (ir) {
+			std::cerr << "Generate LLVM IR for extern function declaration:" << std::endl;
+			ir->print(llvm::errs());
+			std::cerr << std::endl;
+		}
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
+}
+
+void HandleTopLevelExpression() {
+	// Evaluate a top-level expression in an anonymous function.
+	const auto expr = ParseTopLevelExpr();
+	if (expr) {
+		const auto *ir = expr->codegen();
+		if (ir) {
+			// Just-in-time compile the generated LLVM IR
+			// We need to keep a handle to it so that it can be freed later
+			auto H = KaleidoscopeJIT::getInstance()->addModule(std::move(Module));
+			InitializeModuleAndPassManager();
+
+			// Search the JIT for the __anon_expr symbol
+			auto ExprSymbol = KaleidoscopeJIT::getInstance()->findSymbol("__anon_expr");
+			assert(ExprSymbol);
+
+			// Get the symbol's address, cast it to a function pointer
+			// and call the function natively
+			double (*FP)() = reinterpret_cast<double (*)()>(
+					static_cast<intptr_t>(*ExprSymbol.getAddress())
+			);
+			std::cerr << FP() << std::endl;
+
+			// Delete the module created for the anonymous expression
+			KaleidoscopeJIT::getInstance()->removeModule(H);
+		}
+	} else {
+		// Skip token to handle errors.
+		getNextToken();
+	}
 }

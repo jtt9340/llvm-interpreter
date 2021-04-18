@@ -21,6 +21,13 @@ KaleidoscopeJIT::KaleidoscopeJIT()
   llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
 
+std::unique_ptr<KaleidoscopeJIT> KaleidoscopeJIT::TheInstance;
+
+KaleidoscopeJIT *KaleidoscopeJIT::getInstance() {
+	if (!TheInstance) TheInstance = std::unique_ptr<KaleidoscopeJIT>(new KaleidoscopeJIT);	
+	return TheInstance.get();
+}
+
 TargetMachine &KaleidoscopeJIT::getTargetMachine() { return *TM; }
 
 VModuleKey KaleidoscopeJIT::addModule(std::unique_ptr<Module> M) {
