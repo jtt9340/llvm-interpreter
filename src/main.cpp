@@ -5,7 +5,7 @@
 
 #include "KaleidoscopeJIT.h"  // JIT
 #include "parser.h"           // ParseDefinition, ParseExtern, ParseTopLevelExpr
-#include "repl.h"             // MainLoop, HandleDefinition, HandleExtern, HandleTopLevelExpression
+#include "lexer.h"
 
 #define loop for(;;)          // Infinite loop
 
@@ -25,6 +25,36 @@
 extern "C" DLLEXPORT double putchard(double c) {
 	std::fputc(static_cast<char>(c), stderr);
 	return 0;
+}
+
+/// Run a REPL for interpreting expressions. This function runs an interactive
+/// prompt in an infinite loop while there are still tokens to lex/parse.
+///
+/// top ::= definition | external | expression | ';'
+/// 
+/// The prompt given to the user can be contolled by the 'ProgName' parameter.
+///
+/// @param ProgName the name of the program do display to the user in the
+///                 interactive REPL
+static void MainLoop(const char *ProgName) {
+	loop {
+		std::cerr << ProgName << "> ";
+		switch (getCurrentToken()) {
+		case tok_eof:
+			return;
+		case ';': // ignore top-level semicolons
+			getNextToken(); // eat the ';'
+			break;
+		case tok_def:
+			HandleDefinition();
+			break;
+		case tok_extern:
+			HandleExtern();
+			break;
+		default:
+			HandleTopLevelExpression();
+		}
+	}
 }
 
 int main(int argc, const char **argv) {

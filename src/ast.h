@@ -156,4 +156,14 @@ void InitializeModuleAndPassManager();
 /// @returns a function with the given name, or nullptr if the function didn't
 ///          exist and code generation for it failed
 llvm::Function *getFunction(const std::string &Name);
+
+/// What to do when a function definition is encountered at the REPL.
+void HandleDefinition();
+
+/// What to do when an extern function delcaration is encountered at the REPL.
+void HandleExtern();
+
+/// What to do when any other expression that is not a function definition or
+/// extern function declaration is encountered at the REPL.
+void HandleTopLevelExpression();
 #endif
