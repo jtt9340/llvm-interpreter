@@ -33,6 +33,17 @@ llvm::Value *NumberExprAST::codegen() {
 	return llvm::ConstantFP::get(Context, llvm::APFloat(Val));
 }
 
+/// Return a helpful string representation of this NumberExprAST useful
+/// for debugging.
+///
+/// @return a string of the form "NumberExprAST(%f)", where %f is the value
+///         that this NumberExprAST wraps
+std::string NumberExprAST::toString() {
+	std::ostringstream repr("NumberExprAST(", std::ios_base::ate);
+	repr << Val << ')';
+	return repr.str();
+}
+
 /// The constructor for the VariableExprAST class. This constructor just takes a single
 /// parameter: the name of the variable that this AST node represents.
 VariableExprAST::VariableExprAST(const std::string &Name) : Name(Name) {}
@@ -49,6 +60,17 @@ llvm::Value *VariableExprAST::codegen() {
 	}
 
 	return V;
+}
+
+/// Return a helpful string representation of this VariableExprAST useful
+/// for debugging.
+///
+/// @return a string of the form "VariableExprAST(%s)", where %s is the name
+///         of the variable that this VariableExprAST wraps
+std::string VariableExprAST::toString() {
+	std::ostringstream repr("VariableExprAST(", std::ios_base::ate);
+	repr << Name << ')';
+	return repr.str();
 }
 
 /// The constructor for the BinaryExprAST class. This constuctor takes in
@@ -100,6 +122,17 @@ llvm::Value *BinaryExprAST::codegen() {
 	}
 }
 
+/// Return a helpful string representation of this BinaryExprAST, useful
+/// for debugging.
+///
+/// @return a string of the form "%1$s %c %2$s", where %1$s is the string representation
+///         of the left side of this BinaryExprAST, %2$s is the string representation of the
+///         right side of this BinaryExprAST, and %c is the binary operator conjoining the left-
+///         and right-hand sides of this BinaryExprAST
+std::string BinaryExprAST::toString() {
+	return LHS->toString() + ' ' + Op + ' ' + RHS->toString();
+}
+
 /// The constructor for the CallExprAST class. This constuctor accepts the name
 /// of the function being called (callee) as well as all the values passed to the
 /// function.
@@ -133,6 +166,24 @@ llvm::Value *CallExprAST::codegen() {
 	}
 
 	return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+}
+
+/// Return a helpful string representation of this CallExprAST node
+/// useful for debugging.
+///
+/// @return a string of the form "CallExprAST(%1$s(%2$s, %3$s, ..., %n$s))"
+///         where %1$s is the name of the function being called,
+///         and %2$s, %3$s, ..., %n$s are the string representations of the
+///         arguments being passed to this function call
+std::string CallExprAST::toString() {
+	std::ostringstream repr("CallExprAST(", std::ios_base::ate);
+	repr << Callee << '(';
+	for (auto it = Args.begin(); it != Args.end(); it++)
+		if (it == Args.end() - 1)
+			repr << (*it)->toString() << "))";
+		else
+			repr << (*it)->toString() << ", ";
+	return repr.str();
 }
 
 /// The constructor for the IfExprAST class. An if expression contains three components:
@@ -200,6 +251,25 @@ llvm::Value *IfExprAST::codegen() {
 	return PhiNode;
 }
 
+/// Return a helpful string representation of this IfExprAST node
+/// useful for debugging.
+///
+/// @return a string of the form "IfExprAST(%1$s
+///         	? %2$s
+///         	: %3$s
+///         )", where %1$s is the string representation of the condition
+///         part of this IfExprAST, %2$s is the string representation of the
+///         then-clause of this IfExprAST, and %$3s is the string representation
+///         of the else-clause of this IfExprAST
+std::string IfExprAST::toString() {
+	std::ostringstream repr("IfExptAST(", std::ios_base::ate);
+	repr << Cond->toString() << std::endl
+		<< "\t? " << Then->toString() << std::endl
+		<< "\t: " << Else->toString() << std::endl
+		<< ')';
+	return repr.str();
+}
+
 /// The constructor for the PrototypeAST class. A function prototype names the function
 /// as well as the names of its arguments. This constructor takes the function name as
 /// a string and the parameter names as a vector of strings.
@@ -235,6 +305,25 @@ llvm::Function *PrototypeAST::codegen() {
 		Arg.setName(Args[Idx++]);
 
 	return F;
+}
+
+/// Return a helpful string representation of this PrototypeAST node
+/// useful for debugging.
+///
+/// @return a string of the form "PrototypeAST(%1$s(%2$s, %3$s, ..., %n$s))"
+///         where %1$s is the name of the function that this PrototypeAST represents,
+///         and %2$s, %3$s, ..., %n$s are the names of the formal parameters of
+///         this PrototypeAST
+std::string PrototypeAST::toString() {
+	std::ostringstream repr("PrototypeAST(", std::ios_base::ate);
+	repr << Name << '(';
+	for (auto it = Args.begin(); it != Args.end(); it++)
+		if (it == Args.end() - 1)
+			repr << *it << ')';
+		else
+			repr << *it << ", ";
+	repr << ')';
+	return repr.str();
 }
 
 /// The constructor for the FunctionAST class. This constructor takes in the
@@ -302,6 +391,23 @@ llvm::Function *FunctionAST::codegen() {
 	// a faulty function.
 	Function->eraseFromParent();
 	return nullptr;
+}
+
+/// Return a helpful string representation of this FunctionAST node useful
+/// for debugging.
+///
+/// @return a string of the form "FunctionAST(
+///         	%1$s,
+///         	%2$s
+///         )", where %1$s is the string representation of this FunctionAST's
+///         prototype, and %2$s is the string representation of this FunctionAST's
+///         body
+std::string FunctionAST::toString() {
+	std::ostringstream repr("FunctionAST(\n\t", std::ios_base::ate);
+	repr << Proto->toString() << ",\n\t"
+		<< Body->toString() << std::endl
+		<< ')';
+	return repr.str();
 }
 
 void InitializeModuleAndPassManager() {

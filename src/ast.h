@@ -3,11 +3,24 @@
 
 #include <llvm/IR/Value.h> // llvm::Value
 
-#include <string>          // std::string
+#include <sstream>         // std::ostringstream
 #include <vector>          // std::vector
 
+/// An interface for objects that can convert themselves
+/// into a string representation for debugging
+struct Showable {
+	/// Return a string representation of this object
+	virtual std::string toString() {
+		// Default implementation is to just return the memory
+		// address of this object as a string
+		std::ostringstream repr("Showable@", std::ios_base::ate);
+		repr << std::hex << this;
+		return repr.str();
+	}
+};
+
 /// ExprAST - Base class for all expression nodes.
-class ExprAST {
+class ExprAST : public Showable {
 public:
 	/// The destructor for the ExprAST class. Since ther ExprAST class is just an abstract
 	/// base class for all possible nodes of our AST, this is just an empty destructor.
@@ -26,6 +39,8 @@ public:
 	NumberExprAST(double Val);
 
 	llvm::Value *codegen() override;
+
+	std::string toString() override;
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -37,6 +52,8 @@ public:
 	VariableExprAST(const std::string &Name);
 
 	llvm::Value *codegen() override;
+
+	std::string toString() override;
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
@@ -51,6 +68,8 @@ public:
 			std::unique_ptr<ExprAST> RHS);
 
 	llvm::Value *codegen() override;
+
+	std::string toString() override;
 };
 
 /// CallExprAST - Expression class for function calls.
@@ -65,6 +84,8 @@ public:
 			std::vector<std::unique_ptr<ExprAST>> Args);
 
 	llvm::Value *codegen() override;
+
+	std::string toString() override;
 };
 
 /// IfExprAST - Expression for if expressions (similar to C's ternary operator)
@@ -79,12 +100,14 @@ public:
 			std::unique_ptr<ExprAST> Else);
 
 	llvm::Value *codegen() override;
+
+	std::string toString() override;
 };
 
 /// PrototypeAST - This class represents the "Prototype" for a function,
 /// which captures its name and its argument names (which inadvertently
 /// captures the number of formal parameters for that function).
-class PrototypeAST {
+class PrototypeAST : public Showable {
 	/// The name of the function.
 	std::string Name;
 	/// The names of the formal paramters of the function.
@@ -96,11 +119,13 @@ public:
 	const std::string &getName() const;
 
 	llvm::Function *codegen();
+
+	std::string toString() override;
 };
 
 /// FunctionAST - a function prototype coupled with the code of the function
 /// to create a complete function definition.
-class FunctionAST {
+class FunctionAST : public Showable {
 	/// The function prototype that represents this function definition.
 	std::unique_ptr<PrototypeAST> Proto;
 	/// The AST that represents the code for this function definition.
@@ -111,6 +136,8 @@ public:
 			std::unique_ptr<ExprAST> Body);
 
 	llvm::Function *codegen();
+
+	std::string toString() override;
 };
 
 /// Set up the internal module for the interpreter and initialize all
