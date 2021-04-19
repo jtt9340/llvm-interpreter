@@ -104,6 +104,36 @@ public:
 	std::string toString() override;
 };
 
+/// ForExprAST - This class encapsulates the AST node for a for loop, which looks like
+///
+/// for i = 0, i < 6.28319, 0.523599 in
+/// 	sin(i)
+///
+/// The ForExprAST stores the iterator variable name ("i" in the example above),
+/// the initializer expression, the conditional expression, and the "step" as well
+/// as the body of the for loop. This for loop is very similar to C's for loop, except
+/// if the "step" is omitted it is assumed to be 1.
+class ForExprAST : public ExprAST {
+	std::string VarName; ///< The name of the iterator variable, commonly "i"
+	std::unique_ptr<ExprAST> Start; ///< The initializer expression
+	std::unique_ptr<ExprAST> End; ///< The conditional expression that determines when the for loop will end
+	/// The value to increment the variable represented by VarName by.
+	/// If negative, the variable will be decremented.
+	std::unique_ptr<ExprAST> Step; 
+	std::unique_ptr<ExprAST> Body; ///< The code contained within the for loop
+
+public:
+	ForExprAST(const std::string &VarName,
+			std::unique_ptr<ExprAST> Start,
+			std::unique_ptr<ExprAST> End,
+			std::unique_ptr<ExprAST> Step,
+			std::unique_ptr<ExprAST> Body);
+
+	llvm::Value *codegen() override;
+
+	std::string toString() override;
+};
+
 /// PrototypeAST - This class represents the "Prototype" for a function,
 /// which captures its name and its argument names (which inadvertently
 /// captures the number of formal parameters for that function).

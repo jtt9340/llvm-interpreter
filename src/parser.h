@@ -171,6 +171,22 @@ std::unique_ptr<PrototypeAST> ParseExtern();
 ///         parsed
 std::unique_ptr<ExprAST> ParseIfExpr();
 
+/// Parse a for loop, which is of the form
+///
+/// for <var-name> = <init>, <cond> (, <step>)? in <body>;
+///
+/// <init>, <cond>, <step>, and <body> are all expressions and <var-name> is an identifier.
+/// An AST node is retured encapsulating all of the information in the <> brackets: the name of
+/// the iterator variable, the initial expression, the conditional expression, the optional step
+/// added to the iterator variable at the end of each iteration, and the body of the for loop.
+///
+/// This function expects the current token as returned by getNextToken() to be tok_for, and
+/// returns nullptr if any of the expressions in <> brackets cannot be parsed properly.
+///
+/// @return an AST node representing the parsed for loop, or nullptr if any of the expressions that
+///         compose a for loop could not be parsed properly
+std::unique_ptr<ExprAST> ParseForExpr();
+
 /// Parse an expression declared outside of a function. This function exists to allow the user to
 /// interact with the interpreter using a REPL, and just creates an AST node for an anonymous function
 /// definition using the parsed expression.

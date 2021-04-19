@@ -94,6 +94,8 @@ std::unique_ptr<ExprAST> ParsePrimary() {
 		return ParseParenExpr(); // An expression arbitrarily wrapped in parentheses
 	case tok_if:
 		return ParseIfExpr();
+	case tok_for:
+		return ParseForExpr();
 	default:
 		return LogError("unknown token when expecting an expression");
 	}
@@ -233,6 +235,67 @@ std::unique_ptr<ExprAST> ParseIfExpr() {
 	if (!Else) return nullptr;
 	
 	return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
+}
+
+/// forexpr ::= 'for' identifier '=' expr ',' expr (',' expr)? 'in' expression
+/// the (',' expr)? is for the optional step which is assumed to be 1 if not included
+std::unique_ptr<ExprAST> ParseForExpr() {
+	getNextToken(); // Assume the current token is the "for" keyword and consume it
+
+	if (getCurrentToken() != tok_identifier) {
+		std::ostringstream errMsg("Expected identifier after 'for' keyword, but instead got:\n\t", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+
+	std::string IdName = getIdentifierStr();
+	getNextToken(); // Consume the identifier
+
+	if (getCurrentToken() != '=') {
+		std::ostringstream errMsg("Expected '=' after identifier after 'for' keyword, but instead got:\n\t", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+
+	getNextToken(); // Consume '='
+
+	auto Start = ParseExpression();
+	if (!Start) return nullptr;
+
+	if (getCurrentToken() != ',') {
+		std::ostringstream errMsg("Expected ',' after for initializer, but instead got:\n\t", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+
+	getNextToken(); // Consume ','
+
+	auto End = ParseExpression();
+	if (!End) return nullptr;
+
+	// The 'step' value is optional. Will assume 1 in the emitting of
+	// LLVM IR if not provided
+	std::unique_ptr<ExprAST> Step;
+	if (getCurrentToken() == ',') {
+		getNextToken(); // Consume ','
+		Step = ParseExpression();
+		if (!Step) return nullptr;
+	}
+
+	if (getCurrentToken() != tok_in) {
+		std::ostringstream errMsg("Expected 'in' keyword after 'for' statement, but instead got:\n\t", std::ios_base::ate);
+		errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+		return LogError(errMsg.str().c_str());
+	}
+
+	getNextToken(); // Consume 'in'
+
+	auto Body = ParseExpression();
+	if (!Body) return nullptr;
+
+	return std::make_unique<ForExprAST>(IdName, std::move(Start),
+			std::move(End), std::move(Step),
+			std::move(Body));
 }
 
 /// toplevelexpr ::= expression

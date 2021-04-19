@@ -42,3 +42,6 @@ putchard(74);
 putchard(111);
 putchard(101);
 putchard(121);
+
+for i = 65, i < 65+25 in
+	putchard(i);

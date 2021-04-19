@@ -293,6 +293,93 @@ std::string IfExprAST::toString() {
 	return repr.str();
 }
 
+ForExprAST::ForExprAST(const std::string &Name, std::unique_ptr<ExprAST> Start,
+		std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
+		std::unique_ptr<ExprAST> Body)
+	: VarName(Name), Start(std::move(Start)), End(std::move(End)),
+	Step(std::move(Step)), Body(std::move(Body)) {}
+
+llvm::Value *ForExprAST::codegen() {
+	// Emit LLVM IR for the initial expression without the
+	// iterator variable in scope
+	llvm::Value *StartVal = Start->codegen();
+	if (!StartVal) return nullptr;
+
+	// Generate the basic block for the start of the loop body,
+	// taking into account that that block could have multiple
+	// blocks (e.g. if statements, more for loops)
+	llvm::Function *Function = Builder.GetInsertBlock()->getParent();
+	llvm::BasicBlock *LoopHeaderBasicBlock = Builder.GetInsertBlock();
+	llvm::BasicBlock *LoopBasicBlock = llvm::BasicBlock::Create(Context, "loop", Function);
+
+	// Explicit fallthrough from current block to loop block
+	Builder.CreateBr(LoopBasicBlock);
+
+	// Start insterting code into the LoopBasicBlock
+	Builder.SetInsertPoint(LoopBasicBlock);
+
+	llvm::PHINode *Variable = Builder.CreatePHI(llvm::Type::getDoubleTy(Context), 2, VarName.c_str());
+	Variable->addIncoming(StartVal, LoopHeaderBasicBlock);
+
+	// Save the old value of the variable with this name in case
+	// it shadows an earlier one
+	llvm::Value *OldVal = NamedValues[VarName];
+	NamedValues[VarName] = Variable;
+
+	// Emit LLVM IR for the loop body. Keep in mind doing this
+	// can change the current basic block
+	if (!Body->codegen()) return nullptr; // Don't allow an error
+
+	// Emit the step value, setting it to 1.0 if it does not exist
+	llvm::Value *StepVal = nullptr;
+	if (Step) {
+		StepVal = Step->codegen();
+		if (!StepVal) return nullptr;
+	} else {
+		StepVal = llvm::ConstantFP::get(Context, llvm::APFloat(1.0));
+	}
+
+	// Add an increment at the end of the loop, similar to manually adding
+	// i++ at the end of a while loop
+	llvm::Value *IncrementedVar = Builder.CreateFAdd(Variable, StepVal, "incremented");
+
+	// Emit the conditional expression
+	llvm::Value *CondVal = End->codegen();
+	if (!CondVal) return nullptr;
+	
+	// Convert condition to a boolean by comparing not-equal to 0.0
+	CondVal = Builder.CreateFCmpONE(CondVal, llvm::ConstantFP::get(Context, llvm::APFloat(0.0)), "loopcond");
+
+	// Create an insert the basic block that goes after the loop
+	llvm::BasicBlock *LoopEndBasicBlock = Builder.GetInsertBlock();
+	llvm::BasicBlock *AfterBasicBlock = llvm::BasicBlock::Create(Context, "afterloop", Function);
+
+	// Insert the conditional branch that determines if we go back to the start of the loop
+	Builder.CreateCondBr(CondVal, LoopBasicBlock, AfterBasicBlock);
+
+	// Insert any new code after the AfterBasicBlock
+	Builder.SetInsertPoint(AfterBasicBlock);
+
+	Variable->addIncoming(IncrementedVar, LoopEndBasicBlock);
+
+	// Restore the variable that was potentially shadowed before entering the loop
+	if (OldVal)
+		NamedValues[VarName] = OldVal;
+	else
+		NamedValues.erase(VarName);
+
+	// A for expression evaluates to 0.0 (what other value would make sense?)
+	return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(Context));
+}
+
+std::string ForExprAST::toString() {
+	std::ostringstream repr("ForExprAST(", std::ios_base::ate);
+	repr << VarName << " = " << Start->toString() << ", " << End->toString();
+	if (Step) repr << ", " << Step->toString();
+	repr << ',' << std::endl << '\t' << Body->toString() << std::endl << ')';
+	return repr.str();	
+}
+
 /// The constructor for the PrototypeAST class. A function prototype names the function
 /// as well as the names of its arguments. This constructor takes the function name as
 /// a string and the parameter names as a vector of strings.

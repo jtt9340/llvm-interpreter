@@ -29,7 +29,11 @@ enum Token {
 	/// The "then" keyword
 	tok_then = -8,
 	/// The "else" keyword
-	tok_else = -9
+	tok_else = -9,
+	/// The "for" keyword
+	tok_for = -10,
+	/// The "in" keyword
+	tok_in = -11
 };
 
 /// Return a string representation of enum Token suitable for printing
