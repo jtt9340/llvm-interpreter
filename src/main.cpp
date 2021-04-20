@@ -1,13 +1,13 @@
-#include <iostream>  // std::cerr, std::endl
-#include <cstdio>    // std::fputc
+#include <cstdio>   // std::fputc
+#include <iostream> // std::cerr, std::endl
 
-#include <llvm/Support/TargetSelect.h> // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser 
+#include <llvm/Support/TargetSelect.h> // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser
 
-#include "KaleidoscopeJIT.h"  // JIT
-#include "parser.h"           // ParseDefinition, ParseExtern, ParseTopLevelExpr
+#include "KaleidoscopeJIT.h" // JIT
 #include "lexer.h"
+#include "parser.h" // ParseDefinition, ParseExtern, ParseTopLevelExpr
 
-#define loop for(;;)          // Infinite loop
+#define loop for (;;) // Infinite loop
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -23,54 +23,54 @@
 /// @param c the ASCII code of the character to print out
 /// @returns 0
 extern "C" DLLEXPORT double putchard(double c) {
-	std::fputc(static_cast<char>(c), stderr);
-	return 0;
+  std::fputc(static_cast<char>(c), stderr);
+  return 0;
 }
 
 /// Run a REPL for interpreting expressions. This function runs an interactive
 /// prompt in an infinite loop while there are still tokens to lex/parse.
 ///
 /// top ::= definition | external | expression | ';'
-/// 
+///
 /// The prompt given to the user can be contolled by the 'ProgName' parameter.
 ///
 /// @param ProgName the name of the program do display to the user in the
 ///                 interactive REPL
 static void MainLoop(const char *ProgName) {
-	loop {
-		std::cerr << ProgName << "> ";
-		switch (getCurrentToken()) {
-		case tok_eof:
-			return;
-		case ';': // ignore top-level semicolons
-			getNextToken(); // eat the ';'
-			break;
-		case tok_def:
-			HandleDefinition();
-			break;
-		case tok_extern:
-			HandleExtern();
-			break;
-		default:
-			HandleTopLevelExpression();
-		}
-	}
+  loop {
+    std::cerr << ProgName << "> ";
+    switch (getCurrentToken()) {
+    case tok_eof:
+      return;
+    case ';':         // ignore top-level semicolons
+      getNextToken(); // eat the ';'
+      break;
+    case tok_def:
+      HandleDefinition();
+      break;
+    case tok_extern:
+      HandleExtern();
+      break;
+    default:
+      HandleTopLevelExpression();
+    }
+  }
 }
 
 int main(int argc, const char **argv) {
-	llvm::InitializeNativeTarget();
-	llvm::InitializeNativeTargetAsmPrinter();
-	llvm::InitializeNativeTargetAsmParser();
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  llvm::InitializeNativeTargetAsmParser();
 
-	SetupBinopPrecedences();
-	InitializeModuleAndPassManager();
+  SetupBinopPrecedences();
+  InitializeModuleAndPassManager();
 
-	// Get ready to parse the first token.
-	std::cerr << argv[0] << "> ";
-	getNextToken();
+  // Get ready to parse the first token.
+  std::cerr << argv[0] << "> ";
+  getNextToken();
 
-	// Run the REPL now.
-	MainLoop(argv[0]);
+  // Run the REPL now.
+  MainLoop(argv[0]);
 
-	return 0;
+  return 0;
 }

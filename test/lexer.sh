@@ -84,7 +84,7 @@ done
 # for input in . -.12- 45.- 7-8-9 1hello .PHONY; do
 #   do_test "$input" 'invalid token'
 # done
- 
+
 for input in . 1hello .PHONY; do
   do_test "$input" 'invalid token'
 done

@@ -3,7 +3,7 @@
 
 #include <llvm/IR/Value.h> // llvm::Value
 
-#include "ast.h"           // ExprAST, PrototypeAST
+#include "ast.h" // ExprAST, PrototypeAST
 
 /// These are basic helper functions for basic error handling.
 std::unique_ptr<ExprAST> LogError(const char *Str);
