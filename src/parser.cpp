@@ -167,27 +167,79 @@ std::unique_ptr<ExprAST> ParseExpression() {
 
 /// prototype
 ///   ::= id '(' id* ')'
+///   ::= binary LETTER number? (id, id)
 std::unique_ptr<PrototypeAST> ParsePrototype() {
-  if (getCurrentToken() != tok_identifier)
-    return LogErrorP("Expected function name in prototype");
+  std::string FnName;
 
-  const std::string FnName = getIdentifierStr();
-  getNextToken(); // Eat the function name
+  enum { identifier, unary, binary } Kind;
+  unsigned BinaryPrecedence = 30;
 
-  if (getCurrentToken() != '(')
-    return LogErrorP("Expected '(' in prototype");
+  switch (getCurrentToken()) {
+  case tok_identifier:
+    FnName = getIdentifierStr();
+    Kind = identifier;
+    getNextToken();
+    break;
+  case tok_binary:
+    getNextToken();
+    // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
+    if (getCurrentToken() < 0 || getCurrentToken() > 128) {
+      std::ostringstream errMsg("Expected binary operator but found ",
+                                std::ios_base::ate);
+      errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+      return LogErrorP(errMsg.str().c_str());
+    }
+    FnName = std::string("binary") + static_cast<char>(getCurrentToken());
+    Kind = binary;
+    getNextToken();
+
+    // Read the precedence if present
+    if (getCurrentToken() == tok_number) {
+      if (getNumVal() < 1 || getNumVal() > 100) {
+        std::ostringstream errMsg("Invalid predence ", std::ios_base::ate);
+        errMsg << getNumVal() << ": must be >= 1 or <= 100";
+        return LogErrorP(errMsg.str().c_str());
+      }
+      BinaryPrecedence = static_cast<unsigned>(getNumVal());
+      getNextToken();
+    }
+    break;
+  default:
+    std::ostringstream errMsg("Expected function name in prototype but found ",
+                              std::ios_base::ate);
+    errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+    return LogErrorP(errMsg.str().c_str());
+  }
+
+  if (getCurrentToken() != '(') {
+    std::ostringstream errMsg("Expected '(' in prototype but found ");
+    errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+    return LogErrorP(errMsg.str().c_str());
+  }
 
   // Read the list of argument names.
   std::vector<std::string> ArgNames;
   while (getNextToken() == tok_identifier)
     ArgNames.push_back(getIdentifierStr());
-  if (getCurrentToken() != ')')
-    return LogErrorP("Expected ')' in prototype");
+  if (getCurrentToken() != ')') {
+    std::ostringstream errMsg("Expected ')' in prototype but found ");
+    errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+    return LogErrorP(errMsg.str().c_str());
+  }
 
   // We successfully parsed a function prototype.
   getNextToken(); // Eat the ')'
 
-  return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames));
+  // Verify that an operator was declared to have the correct
+  // number of operands
+  if (Kind && ArgNames.size() != Kind) {
+    std::ostringstream errMsg("Invalid number of operands for operator ");
+    errMsg << FnName << ": expected " << Kind << " but got " << ArgNames.size();
+    return LogErrorP(errMsg.str().c_str());
+  }
+
+  return std::make_unique<PrototypeAST>(FnName, std::move(ArgNames), Kind != 0,
+                                        BinaryPrecedence);
 }
 
 /// definition ::= 'def' prototype expression
@@ -252,7 +304,7 @@ std::unique_ptr<ExprAST> ParseIfExpr() {
 /// included
 std::unique_ptr<ExprAST> ParseForExpr() {
   // Assume the current token is the "for" keyword and consume it
-  getNextToken(); 
+  getNextToken();
 
   if (getCurrentToken() != tok_identifier) {
     std::ostringstream errMsg(

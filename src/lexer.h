@@ -33,7 +33,13 @@ enum Token {
   /// The "for" keyword
   tok_for = -10,
   /// The "in" keyword
-  tok_in = -11
+  tok_in = -11,
+
+  // user-defined operators
+  /// The "binary" keyword
+  tok_binary = -12,
+  /// The "unary" keyword
+  tok_unary = -13
 };
 
 /// Return a string representation of enum Token suitable for printing

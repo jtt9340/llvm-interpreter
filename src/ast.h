@@ -121,9 +121,10 @@ class ForExprAST : public ExprAST {
   std::unique_ptr<ExprAST> Start; ///< The initializer expression
   std::unique_ptr<ExprAST> End; ///< The conditional expression that determines
                                 ///< when the for loop will end
-  std::unique_ptr<ExprAST> Step; ///< The value to increment the variable
-                                 ///< represented by VarName by.
-                                 ///< If negative, the variable will be decremented.
+  std::unique_ptr<ExprAST>
+      Step; ///< The value to increment the variable
+            ///< represented by VarName by.
+            ///< If negative, the variable will be decremented.
   std::unique_ptr<ExprAST> Body; ///< The code contained within the for loop
 
 public:
@@ -144,15 +145,29 @@ class PrototypeAST : public Showable {
   std::string Name;
   /// The names of the formal paramters of the function.
   std::vector<std::string> Args;
+  /// Is this a unary or binary operator?
+  bool IsOperator;
+  /// The precedence if this is a binary operator, or 0 if
+  /// this is not
+  unsigned Precedence;
 
 public:
-  PrototypeAST(const std::string &Name, std::vector<std::string> Args);
+  PrototypeAST(const std::string &Name, std::vector<std::string> Args,
+               bool IsOperator = false, unsigned Precedence = 0);
 
   const std::string &getName() const;
 
   llvm::Function *codegen();
 
   std::string toString() override;
+
+  bool isUnaryOp() const;
+
+  bool isBinaryOp() const;
+
+  char getOperatorName() const;
+
+  unsigned getBinaryPrecedence() const;
 };
 
 /// FunctionAST - a function prototype coupled with the code of the function

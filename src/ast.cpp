@@ -52,8 +52,8 @@ NumberExprAST::NumberExprAST(double Val) : Val(Val) {}
 
 /// Generate LLVM IR for a numeric constant.
 llvm::Value *NumberExprAST::codegen() {
-  // ConstantFP -> holds a compile-time floating point constant, represeted by a... 
-  // APFloat -> Arbitrary Precision Float
+  // ConstantFP -> holds a compile-time floating point constant, represeted by
+  // a... APFloat -> Arbitrary Precision Float
   return llvm::ConstantFP::get(Context, llvm::APFloat(Val));
 }
 
@@ -407,12 +407,22 @@ std::string ForExprAST::toString() {
   return repr.str();
 }
 
-/// The constructor for the PrototypeAST class. A function prototype names the
-/// function as well as the names of its arguments. This constructor takes the
-/// function name as a string and the parameter names as a vector of strings.
+/// The constructor for the PrototypeAST class.
+///
+/// @param Name the name of the function prototype
+/// @param Args the names of the parameters to the function being represented by
+///        this prototype
+/// @param IsOperator whether or not this Prototype AST node represents a unary
+/// or
+///        binary operator
+/// @param Precedence the precedence of this binary operator if this Prototype
+/// AST
+///        node represents a binary operator
 PrototypeAST::PrototypeAST(const std::string &Name,
-                           std::vector<std::string> Args)
-    : Name(Name), Args(std::move(Args)) {}
+                           std::vector<std::string> Args,
+                           bool IsOperator = false, unsigned Precedence = 0)
+    : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
+      Precedence(Precedence) {}
 
 /// Getter for the "Name" field of instances of PrototypeAST.
 const std::string &PrototypeAST::getName() const { return Name; }
@@ -465,6 +475,16 @@ std::string PrototypeAST::toString() {
   return repr.str();
 }
 
+bool PrototypeAST::isUnaryOp() const { return IsOperator && Args.size() == 1; }
+
+bool PrototypeAST::isBinaryOp() const { return IsOperator && Args.size() == 2; }
+
+char PrototypeAST::getOperatorName() const {
+  return isUnaryOp() || isBinaryOp() ? Name[Name.size() - 1] : 0;
+}
+
+unsigned PrototypeAST::getBinaryPrecedence() const { return Precedence; }
+
 /// The constructor for the FunctionAST class. This constructor takes in the
 /// funciton prototype part of this function definition followed by the
 /// code that defines the behavior of the function.
@@ -473,7 +493,7 @@ FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
     : Proto(std::move(Proto)), Body(std::move(Body)) {}
 
 llvm::Function *FunctionAST::codegen() {
-  auto &P = *Proto;
+  const auto &P = *Proto;
   FunctionProtos[Proto->getName()] = std::move(Proto);
   // Check for an existing function made by an 'extern' declaration.
   llvm::Function *Function = getFunction(P.getName());

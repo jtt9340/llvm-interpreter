@@ -8,10 +8,10 @@
 
 #include <llvm/IR/Function.h> // llvm::Function
 
-#include "ast.h" // class ExprAST, class NumberExprAST, class VariableExprAST,
-                 // class BinaryExprAST, class CallExprAST, class PrototypeAST
-                 // class FunctionAST
-#include "lexer.h"   // gettok, enum Token
+#include "ast.h"   // class ExprAST, class NumberExprAST, class VariableExprAST,
+                   // class BinaryExprAST, class CallExprAST, class PrototypeAST
+                   // class FunctionAST
+#include "lexer.h" // gettok, enum Token
 #include "logging.h" // LogError, LogErrorP
 
 #define loop for (;;) // Infinite loop
@@ -102,6 +102,10 @@ static int gettok() {
       return tok_for;
     if (IdentifierStr == "in")
       return tok_in;
+    if (IdentifierStr == "binary")
+      return tok_binary;
+    if (IdentifierStr == "unary")
+      return tok_unary;
     return tok_identifier;
   }
 
