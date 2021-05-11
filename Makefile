@@ -99,3 +99,6 @@ clean:
 
 realclean:	clean
 	@rm -v -f $(RELEXE) $(DBGEXE)
+	# Remove any other executables produced by the 'examples' target
+	find $(DBGDIR) -type f -perm +111 -exec rm -v {} +
+	find $(RELDIR) -type f -perm +111 -exec rm -v {} +
