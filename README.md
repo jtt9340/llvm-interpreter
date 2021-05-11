@@ -134,7 +134,8 @@ for i = 0, i < 10, 2 in
 You can find the syntax of Kaleidoscope altogether in the sample file [test/kaleidoscope_input.txt](test/kaleidoscope_input.txt).
 
 ## Building From Source
-Ensure LLVM is installed on your machine. On a Mac with [Homebrew]: `brew install llvm`.
+Ensure LLVM is installed on your machine. I've been building this against LLVM version 11.1.0; it might build with newer versions
+but I have not tested that. On a Mac with [Homebrew]: `brew install llvm@11`.
 
 The project is controlled by a single Makefile. In the root of this repository, run
 

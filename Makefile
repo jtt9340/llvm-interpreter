@@ -10,8 +10,8 @@ CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --li
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm),)
 	# Use the libc++ bundled with Homebrew
-	CPPFLAGS =	-I/usr/local/opt/llvm/include
-	LDFLAGS =	-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib
+	CPPFLAGS =	-I/usr/local/opt/llvm@11/include
+	LDFLAGS =	-L/usr/local/opt/llvm@11/lib -Wl,-rpath,/usr/local/opt/llvm@11/lib
 endif
 
 #
