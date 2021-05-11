@@ -115,7 +115,7 @@ llvm::Value *BinaryExprAST::codegen() {
   switch (Op) {
   // The string literal parameter in each of these function invocations
   // is an optional name to use in the generator instructions which makes
-  // reading the generated instructions a lot easier/
+  // reading the generated instructions a lot easier.
   case '+':
     return Builder.CreateFAdd(L, R, "addtmp");
   case '-':
@@ -139,12 +139,14 @@ llvm::Value *BinaryExprAST::codegen() {
   case '>':
     L = Builder.CreateFCmpUGT(L, R, "cmpugttmp");
     return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
-  default:
-    std::ostringstream errMsg("unrecognized binary operator: ",
-                              std::ios_base::ate);
-    errMsg << Op;
-    return LogErrorV(errMsg.str().c_str());
   }
+
+  // If we jave gotten to this point, then Op is a user-defined binary operator
+  llvm::Function *F = getFunction(std::string("binary") + Op);
+  assert(F);
+
+  llvm::Value *Operands[2] = {L, R};
+  return Builder.CreateCall(F, Operands, "binop");
 }
 
 /// Return a helpful string representation of this BinaryExprAST, useful
@@ -420,7 +422,7 @@ std::string ForExprAST::toString() {
 ///        node represents a binary operator
 PrototypeAST::PrototypeAST(const std::string &Name,
                            std::vector<std::string> Args,
-                           bool IsOperator = false, unsigned Precedence = 0)
+                           bool IsOperator, unsigned Precedence)
     : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
       Precedence(Precedence) {}
 
@@ -499,6 +501,10 @@ llvm::Function *FunctionAST::codegen() {
   llvm::Function *Function = getFunction(P.getName());
   if (!Function)
     return nullptr;
+
+  // If this is a binary operator, add it to the binary operator precedence table.
+  if (P.isBinaryOp())
+    InstallBinopPrecedence(P.getOperatorName(), P.getBinaryPrecedence());
 
   // TODO Supposedly there is a bug in this function where an existing
   // LLVM IR function definition does not validate its signature against

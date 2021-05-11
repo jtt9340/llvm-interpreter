@@ -22,6 +22,10 @@ void SetupBinopPrecedences() {
   BinopPrecedence['/'] = 40; // Highest precedence
 }
 
+int InstallBinopPrecedence(const char Op, const int Precedence) {
+  return BinopPrecedence[Op] = Precedence;
+}
+
 /// numberexpr ::= number
 std::unique_ptr<ExprAST> ParseNumberExpr() {
   auto Result = std::make_unique<NumberExprAST>(getNumVal());

@@ -11,6 +11,15 @@
 /// binary operator precedence table being properly filled in.
 void SetupBinopPrecedences();
 
+/// Add a binary operator 'Op' to the internal binary operator precedence table
+/// with the value Precedence. Return the precedence the binary operator Op was
+/// set to.
+///
+/// @param Op the binary operator to add a precedence for
+/// @param Precedence the precedence to add the binary operator for
+/// @return the precedence the binary operator was installed with
+int InstallBinopPrecedence(const char Op, const int Precedence);
+
 /// Transform the floating point number tokenized by gettok() into an AST node
 /// that represents a numerical expression.
 ///
