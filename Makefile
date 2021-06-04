@@ -8,7 +8,7 @@ CXX =	clang++
 CFLAGS = -Wall -Wextra -pedantic -pipe 
 CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
 
-ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm),)
+ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
 	# Use the libc++ bundled with Homebrew
 	CPPFLAGS =	-I/usr/local/opt/llvm@11/include
 	LDFLAGS =	-L/usr/local/opt/llvm@11/lib -Wl,-rpath,/usr/local/opt/llvm@11/lib
@@ -47,7 +47,7 @@ RELCFLAGS =	-O2 -DNDEBUG
 EXAMPLEDIR =	examples
 EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 
-.PHONY:	all clean realclean debug release prep remake test examples
+.PHONY:	all clean realclean debug release prep remake test examples fmt
 
 # Default build
 all:	prep release
@@ -102,3 +102,7 @@ realclean:	clean
 	# Remove any other executables produced by the 'examples' target
 	find $(DBGDIR) -type f -perm +111 -exec rm -v {} +
 	find $(RELDIR) -type f -perm +111 -exec rm -v {} +
+
+fmt:
+	clang-format --style=llvm -i $(SRCS) $(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h))
+	shfmt -s -w -i 2 -ci test/lexer.sh
