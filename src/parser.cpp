@@ -10,6 +10,9 @@
 // This holds the precedence for each binary operator that is defined
 static std::unordered_map<char, int> BinopPrecedence;
 
+/// Is c an ASCII character, assuming an ASCII or UTF-8 encoding?
+static inline bool isascii(const char c) { return c > 0 || c < 128; }
+
 void SetupBinopPrecedences() {
   // Create the binary operators, specifying their precedences.
   // The lower the number, the lower the precedence.
@@ -108,8 +111,7 @@ std::unique_ptr<ExprAST> ParsePrimary() {
 // Get the precedence of the pending binary operator token
 int GetTokPrecedence() {
   const int CurTok = getCurrentToken();
-  // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
-  if (CurTok < 0 || CurTok >= 128)
+  if (!isascii(CurTok))
     return -1;
 
   const int TokPrec = BinopPrecedence[CurTok];
@@ -117,8 +119,27 @@ int GetTokPrecedence() {
   return TokPrec <= 0 ? -1 : TokPrec;
 }
 
+std::unique_ptr<ExprAST> ParseUnary() {
+  const int CurTok = getCurrentToken();
+  // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
+  // (or is an ( or ,), then this is a parimary expression and not a unary
+  // operator.
+  if (!isascii(CurTok) || CurTok == '(' || CurTok == ',')
+    return ParsePrimary();
+
+  // Otherwise, this is a unary operator
+  int Opcode = CurTok;
+  getNextToken();
+  // Notice we call ParseUnary again... we keep doing this until the thing to be
+  // parsed can't be parsed as a unary operator. This way, we handle multiple
+  // back-to-back unary operators like double negation
+  if (auto Operand = ParseUnary())
+    return std::make_unique<UnaryExprAST>(Opcode, std::move(Operand));
+  return nullptr;
+}
+
 /// binoprhs
-///   ::= ('+' primary)*
+///   ::= ('+' unary)*
 std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                        std::unique_ptr<ExprAST> LHS) {
   // If this is a binary operator, find its precedence
@@ -136,8 +157,10 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
     int BinOp = getCurrentToken();
     getNextToken(); // eat the binary operator
 
-    // Parse the primary expression after the binary operator.
-    auto RHS = ParsePrimary();
+    // Parse the unary expression after the binary operator.
+    // (If there is no unary operator, then this just parses
+    // as a primary expression)
+    auto RHS = ParseUnary();
     if (!RHS)
       return nullptr;
 
@@ -160,10 +183,10 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 }
 
 /// expression
-///   ::= primary binoprhs
+///   ::= unary binoprhs
 ///
 std::unique_ptr<ExprAST> ParseExpression() {
-  auto LHS = ParsePrimary();
+  auto LHS = ParseUnary();
   // Attempt to parse an expression; if it is successfull (a valid token)
   // then parse a potential RHS in case it is a binary operator
   return LHS ? ParseBinOpRHS(0, std::move(LHS)) : nullptr;
@@ -184,10 +207,21 @@ std::unique_ptr<PrototypeAST> ParsePrototype() {
     Kind = identifier;
     getNextToken();
     break;
+  case tok_unary:
+    getNextToken();
+    if (!isascii(getCurrentToken())) {
+      std::ostringstream errMsg("Expected unary operator but found ",
+                                std::ios_base::ate);
+      errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+      return LogErrorP(errMsg.str().c_str());
+    }
+    FnName = std::string("unary") + static_cast<char>(getCurrentToken());
+    Kind = unary;
+    getNextToken();
+    break;
   case tok_binary:
     getNextToken();
-    // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
-    if (getCurrentToken() < 0 || getCurrentToken() > 128) {
+    if (!isascii(getCurrentToken())) {
       std::ostringstream errMsg("Expected binary operator but found ",
                                 std::ios_base::ate);
       errMsg << tokenToString(static_cast<Token>(getCurrentToken()));

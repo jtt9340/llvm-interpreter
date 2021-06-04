@@ -153,14 +153,34 @@ llvm::Value *BinaryExprAST::codegen() {
 /// for debugging.
 ///
 /// @return a string of the form "%1$s %c %2$s", where %1$s is the string
-/// representation
-///         of the left side of this BinaryExprAST, %2$s is the string
-///         representation of the right side of this BinaryExprAST, and %c is
-///         the binary operator conjoining the left- and right-hand sides of
-///         this BinaryExprAST
+/// representation of the left side of this BinaryExprAST, %2$s is the string
+/// representation of the right side of this BinaryExprAST, and %c is
+/// the binary operator conjoining the left- and right-hand sides of this
+/// BinaryExprAST
 std::string BinaryExprAST::toString() {
   return LHS->toString() + ' ' + Op + ' ' + RHS->toString();
 }
+
+UnaryExprAST::UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
+    : Op(Opcode), Operand(std::move(Operand)) {}
+
+llvm::Value *UnaryExprAST::codegen() {
+  llvm::Value *OperandValue = Operand->codegen();
+  if (!OperandValue)
+    return nullptr;
+
+  llvm::Function *Operator = getFunction(std::string("unary") + Op);
+  if (!Operator) {
+    // "Unknown unary operator" is 23 characters  + 1 for Op + 1 for NUL byte
+    char errMsg[25];
+    std::sprintf(errMsg, "Unknown unary operator %c", Op);
+    return LogErrorV(errMsg);
+  }
+
+  return Builder.CreateCall(Operator, OperandValue, "unop");
+}
+
+std::string UnaryExprAST::toString() { return Op + Operand->toString(); }
 
 /// The constructor for the CallExprAST class. This constuctor accepts the name
 /// of the function being called (callee) as well as all the values passed to
@@ -421,8 +441,8 @@ std::string ForExprAST::toString() {
 /// AST
 ///        node represents a binary operator
 PrototypeAST::PrototypeAST(const std::string &Name,
-                           std::vector<std::string> Args,
-                           bool IsOperator, unsigned Precedence)
+                           std::vector<std::string> Args, bool IsOperator,
+                           unsigned Precedence)
     : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
       Precedence(Precedence) {}
 
@@ -502,7 +522,8 @@ llvm::Function *FunctionAST::codegen() {
   if (!Function)
     return nullptr;
 
-  // If this is a binary operator, add it to the binary operator precedence table.
+  // If this is a binary operator, add it to
+  // the binary operator precedence table.
   if (P.isBinaryOp())
     InstallBinopPrecedence(P.getOperatorName(), P.getBinaryPrecedence());
 

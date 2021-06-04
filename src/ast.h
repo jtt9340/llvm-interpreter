@@ -73,6 +73,21 @@ public:
   std::string toString() override;
 };
 
+/// UnaryExprAST - Expression class for a unary operator.
+class UnaryExprAST : public ExprAST {
+  /// The particular operator.
+  char Op;
+  /// The operand of the unary operator.
+  std::unique_ptr<ExprAST> Operand;
+
+public:
+  UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand);
+
+  llvm::Value *codegen() override;
+
+  std::string toString();
+};
+
 /// CallExprAST - Expression class for function calls.
 class CallExprAST : public ExprAST {
   /// The function being called.

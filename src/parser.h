@@ -28,7 +28,7 @@ int InstallBinopPrecedence(const char Op, const int Precedence);
 /// function will then use that global variable to turn that into an AST node
 /// for a numerical expression, so
 ///
-///         (1) gettok() should be called before calling this function to get 
+///         (1) gettok() should be called before calling this function to get
 ///             the next numerical token in the source code
 ///         (2) the user should check that gettok() indeed found a tok_number,
 ///             (can be determined with getNextToken()) or else the numerical
@@ -95,6 +95,23 @@ std::unique_ptr<ExprAST> ParsePrimary();
 /// returned by getNextToken(),
 ///         or -1 if the current token is not a valid binary operator
 int GetTokPrecedence();
+
+/// Parse the current token as returned by getNextToken() as a unary operator.
+/// A unary operator is parsed as any character that is not an ASCII character
+/// or is not an opening parenthesis or comma.
+///
+/// If the current token cannot be parsed as a unary operator, then just parse
+/// the current token as a primary expression (see ParsePrimary).
+///
+/// The returned AST node represents the unary operator and the parimary
+/// expression the unary operator is being applied to (the operand). If parsing
+/// fails, nullptr is returned.
+///
+/// @return an AST node representing the unary operator and the primary
+/// expression,
+///         or just the primary expression if there is no unary operator, or
+///         nullptr if there was an error with parsing
+std::unique_ptr<ExprAST> ParseUnary();
 
 /// Parse a sequence of primary expressions (see ParsePrimary) conjoined by
 /// binary operators, after having already parsed the initial primary expression
@@ -178,8 +195,9 @@ std::unique_ptr<FunctionAST> ParseDefinition();
 /// definition as parsed by ParsePrototype.
 ///
 /// @return an AST node representing the function prototype definition for the
-///         parsed extern function declaration, or nullptr if there are no opening
-///         or closing parenthesis as part of the extern function declaration
+///         parsed extern function declaration, or nullptr if there are no
+///         opening or closing parenthesis as part of the extern function
+///         declaration
 std::unique_ptr<PrototypeAST> ParseExtern();
 
 /// Parse an if expression, which is of the form
@@ -222,7 +240,8 @@ std::unique_ptr<ExprAST> ParseForExpr();
 /// expression.
 ///
 /// @return an AST node for a complete function definition containing an
-///         expression that is parsed at the top-level, i.e. outside of a function
+///         expression that is parsed at the top-level, i.e. outside of a
+///         function
 std::unique_ptr<FunctionAST> ParseTopLevelExpr();
 
 #endif
