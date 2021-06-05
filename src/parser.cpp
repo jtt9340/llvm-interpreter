@@ -122,7 +122,7 @@ int GetTokPrecedence() {
 std::unique_ptr<ExprAST> ParseUnary() {
   const int CurTok = getCurrentToken();
   // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
-  // (or is an ( or ,), then this is a parimary expression and not a unary
+  // (or is an ( or ,), then this is a primary expression and not a unary
   // operator.
   if (!isascii(CurTok) || CurTok == '(' || CurTok == ',')
     return ParsePrimary();
@@ -153,7 +153,7 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 
     // At this point, we are indeed parsing a binary operator with a high enough
     // precedence. If it wasn't a binary operator, TokPrec would be -1 which
-    // would indeed be < Exprec, so we wouldn't have gotten here by now.
+    // would indeed be < ExprPrec, so we wouldn't have gotten here by now.
     int BinOp = getCurrentToken();
     getNextToken(); // eat the binary operator
 

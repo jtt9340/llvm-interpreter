@@ -12,7 +12,7 @@ numbers. Boolean values are simulated by having 0.0 evaluate to a false-y (false
 Functions begin with the `def` keyword followed by a function name. Valid function names start with an upper
 or lowercase letter `[A-Za-z]`, an underscore `_`, or a dollar sign `$`, followed by more upper or lowercase letters,
 underscores, and dollar signs, as well as numbers `[0-9]`. What follows must be a parameter list, i.e. zero or more identifiers
-encased in parenthesis and separated by whitespace. This is different from most languages that choose to have their function
+encased in parentheses and separated by whitespace. This is different from most languages that choose to have their function
 declaration and invocation syntaxes mimic mathematical function notation--where a comma separates identifers--but in this case,
 all you need is whitespace. The rules for valid function paramter names are the same as rules for valid function names.
 
@@ -131,6 +131,86 @@ for i = 0, i < 10, 2 in
     putchard(42 + i);
 ```
 
+### Used-Defined Unary and Binary Operators
+Unlike many modern mainstream languages, Kaleidoscope allows the user to define their own unary and binary operators. As a refresher,
+unary operators operate on one and only one operand while binary operators operate on exactly two operands. Unary and binary
+operators can only be composed of single characters.
+
+#### Defining Unary Operators
+Defining unary operators is similar to defining functions: start with the `def` keyword, but then use the `unary` keyword followed by the
+character of the unary operator you want to define. Finally follow with a parenthesis-encased space-delimited parameter list and the
+expression of the operator.
+
+Using the power of user-defined operators, we can define operators that are usually built-in to most languages:
+
+```
+# Logical negation
+def unary !(v)
+	if v then
+		0
+	else
+		1;
+
+# Unary negation
+def unary -(v)
+	0-v;
+```
+
+Using that last definition of `unary -` allows us to redefine the `abs` function from above as
+
+```
+def abs(v)
+	if is_positive(v) then
+		v
+	else
+		-v; # Before we had to do 0-v which is what unary - does for us
+```
+
+#### Defining Binary Operators
+Defining binary operators is just like defining unary ones, except a positive integer appears between the operator and the parameter
+list, and we use the `binary` keyword instead of the `unary` keyword. What does the positive integer do? In order to prevent parsing
+ambiguities with expressions involving binary operators, pretty much every language (except Lisp which doesn't have this problem due
+to its epic S-expressions :sunglasses:) hard-codes a series of _precedences_ for every binary operator to know which one(s) to prioritize.
+This has the benefit of matching the order of operations (PEMDAS) from math, so there is no surprising behavior. What does this all mean?
+Whenever you define a new binary operator you **must** specify its precedence, which is what that positive integer between the operator
+and the parameter list is. The higher the number, the higher the precedence.
+
+```
+# We can define the logical "or" operator in our own language! How many languages can do that? Although, this is non-
+# short-circuiting.
+def binary | 5(LHS RHS)
+	if LHS then
+		1
+	else if RHS then
+		1
+	else
+		0;
+
+# Non short-circuiting logical "and". Notice this has a precedence of 6, so it will take higher precedence over | which
+# only has a precedence of 5.
+def binary & 6(LHS RHS)
+	if !LHS then
+		0
+	else
+		!!RHS; # Convert RHS to a 0/1 with !!
+
+# Back in the "Comparison Operators" section I said only < and > were built into the language, but we can define =, the
+# equality operator (NOT the assignment operator). Two numbers are considered equal if neither is greater nor less than
+# the other.
+def binary = 9 (LHS RHS)
+	!(LHS < RHS | LHS > RHS);
+
+# In this example, & has higher precedence over |, so this parses as
+#
+# (3 = 3.3) | ( (2 + 2 = 5) & (-20 / 2 = 3 - 13) ) | (1 = 1)
+#
+# rather than
+#
+# ( (3 = 3.3) | (2 + 2 = 5) ) & ( (-20 / 2 = 3 - 13) | (1 = 1) )
+(3 = 3.3) | (2 + 2 = 5) & (-20 / 2 = 3 - 13) | (1 = 1)
+``` 
+
+
 You can find the syntax of Kaleidoscope altogether in the sample file [test/kaleidoscope_input.txt](test/kaleidoscope_input.txt).
 
 ## Building From Source
@@ -139,14 +219,14 @@ but I have not tested that. On a Mac with [Homebrew]: `brew install llvm@11`.
 
 The project is controlled by a single Makefile. In the root of this repository, run
 
-```
+```Bash
 make
 ```
 
 The resulting binary is called `kaleidoscope` and lives in the `target/release` directory.
 You can also run
 
-```
+```Bash
 make debug
 ```
 
@@ -155,13 +235,30 @@ to get a debug build in the `target/debug` directory, which builds with debug sy
 undefined behavior).
 
 Additionally, there is an [examples](examples) directory that contains self-contained programs that test certain components of the
-interpreter. You can build those with `make examples`. The resulting binaries will be found in `target/debug`.
+interpreter. You can build those with
+
+```Bash
+make examples
+```
+
+The resulting binaries will be found in `target/debug`.
+
+There is also a `make` target for formatting code:
+```Bash
+make fmt
+```
+
+For this target to run successfully you must also have `clang-format` and [`shfmt`](shfmt) installed.
 
 Finally, there is a rudimentary test that tests the lexer and that the interpreter doesn't crash with the aforementioned
-[test/kaleidoscope_input.txt](test/kaleidoscope_input.txt): `make test`.
+[test/kaleidoscope_input.txt](test/kaleidoscope_input.txt):
+```Bash
+make test
+```
 
 [LLVM Tutorial]: https://llvm.org/docs/tutorial/index.html
 [Homebrew]: https://brew.sh
 [LLDB]: https://lldb.llvm.org
 [AddressSanitizer]: https://github.com/google/sanitizers/wiki/AddressSanitizer
 [UBSan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+[shfmt]: https://github.com/mvdan/sh

@@ -72,9 +72,18 @@ def binary & 6(LHS RHS)
 	else
 		!!RHS; # Convert RHS to a 0/1 with !!
 
-#Equality operator
+# Equality operator
 def binary = 9 (LHS RHS)
 	!(LHS < RHS | LHS > RHS);
 
 # Sequence several functions together
 def binary : 1(x y) y;
+
+def abs(v)
+    if v > 0 then
+        v
+    else
+        -v;
+
+abs(32);
+abs(-32);
