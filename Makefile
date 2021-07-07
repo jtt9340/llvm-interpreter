@@ -1,6 +1,11 @@
 # Makefile adapted from https://stackoverflow.com/a/20830354
 
 #
+# Other varibles about the environment this is being executed in
+#
+UNAME := $(shell uname)
+
+#
 # Compiler flags
 #
 CC =	clang
@@ -47,7 +52,7 @@ RELCFLAGS =	-O2 -DNDEBUG
 EXAMPLEDIR =	examples
 EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 
-.PHONY:	all clean realclean debug release prep remake test examples fmt
+.PHONY:	all clean realclean remove-executables debug release prep remake test examples fmt fmt-helper
 
 # Default build
 all:	prep release
@@ -97,12 +102,26 @@ remake:	realclean all
 clean:
 	@rm -v -f $(RELOBJS) $(DBGOBJS)
 
-realclean:	clean
-	@rm -v -f $(RELEXE) $(DBGEXE)
-	# Remove any other executables produced by the 'examples' target
-	find $(DBGDIR) -type f -perm +111 -exec rm -v {} +
-	find $(RELDIR) -type f -perm +111 -exec rm -v {} +
+ifeq ($(UNAME),Darwin)
+remove-executables:
+	find $(DBGDIR) -type f -perm +111 -delete
+	find $(RELDIR) -type f -perm +111 -delete
+else
+remove-executables:
+	find $(DBGDIR) -executable -type f -delete 
+	find $(RELDIR) -executable -type f -delete 
+endif
 
-fmt:
+realclean:	clean remove-executables
+	@rm -v -f $(RELEXE) $(DBGEXE)
+
+fmt-helper:
 	clang-format --style=llvm -i $(SRCS) $(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h))
 	shfmt -s -w -i 2 -ci test/lexer.sh
+
+ifneq (shell command nixfmt --help,)
+fmt: fmt-helper
+	nixfmt --width=80 shell.nix
+else
+fmt: fmt-helper
+endif
