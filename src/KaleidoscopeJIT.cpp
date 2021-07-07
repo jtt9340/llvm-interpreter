@@ -24,8 +24,9 @@ KaleidoscopeJIT::KaleidoscopeJIT()
 std::unique_ptr<KaleidoscopeJIT> KaleidoscopeJIT::TheInstance;
 
 KaleidoscopeJIT *KaleidoscopeJIT::getInstance() {
-	if (!TheInstance) TheInstance = std::unique_ptr<KaleidoscopeJIT>(new KaleidoscopeJIT);	
-	return TheInstance.get();
+  if (!TheInstance)
+    TheInstance = std::unique_ptr<KaleidoscopeJIT>(new KaleidoscopeJIT);
+  return TheInstance.get();
 }
 
 TargetMachine &KaleidoscopeJIT::getTargetMachine() { return *TM; }

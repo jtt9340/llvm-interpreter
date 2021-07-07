@@ -668,11 +668,19 @@ void HandleTopLevelExpression() {
           KaleidoscopeJIT::getInstance()->findSymbol("__anon_expr");
       assert(ExprSymbol);
 
-      // Get the symbol's address, cast it to a function pointer
-      // and call the function natively
-      double (*FP)() = reinterpret_cast<double (*)()>(
-          static_cast<intptr_t>(*ExprSymbol.getAddress()));
-      std::cerr << FP() << std::endl;
+      // Get the memory address of the function. This could fail if
+      // for some reason the function isn't found. Just report an error
+      // in this case
+      auto ExprSymbolAddress = ExprSymbol.getAddress();
+      if (auto E = ExprSymbolAddress.takeError()) {
+        LogError(toString(std::move(E)).c_str());
+      } else {
+        // Cast the symbol's address to a function pointer
+        // and call the function natively
+        double (*FP)() = reinterpret_cast<double (*)()>(
+            static_cast<intptr_t>(*ExprSymbolAddress));
+        std::cerr << FP() << std::endl;
+      }
 
       // Delete the module created for the anonymous expression
       KaleidoscopeJIT::getInstance()->removeModule(H);

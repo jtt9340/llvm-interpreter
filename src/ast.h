@@ -85,7 +85,7 @@ public:
 
   llvm::Value *codegen() override;
 
-  std::string toString();
+  std::string toString() override;
 };
 
 /// CallExprAST - Expression class for function calls.
