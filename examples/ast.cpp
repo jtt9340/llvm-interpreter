@@ -25,13 +25,13 @@ int main(int argc, const char **argv) {
         std::cout << defn->toString() << std::endl;
       else
         getNextToken();
-    }
+    } break;
     case tok_extern: {
       if (const auto externDeclaration = ParseExtern())
         std::cout << externDeclaration->toString() << std::endl;
       else
         getNextToken();
-    }
+    } break;
     default: {
       if (const auto expr = ParseTopLevelExpr())
         std::cout << expr->toString() << std::endl;

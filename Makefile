@@ -34,7 +34,7 @@ EXE =	kaleidoscope
 DBGDIR =	target/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
-DBGCFLAGS =	-g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
+DBGCFLAGS =	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 # Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
 # DBGFLAGS += -fno-optimize-sibling-calls
 
@@ -116,7 +116,9 @@ realclean:	clean remove-executables
 	@rm -v -f $(RELEXE) $(DBGEXE)
 
 fmt-helper:
-	clang-format --style=llvm -i $(SRCS) $(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h))
+	clang-format --style=llvm -i $(SRCS) \
+		$(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h)) \
+		$(wildcard $(EXAMPLEDIR)/*.cpp)
 	shfmt -s -w -i 2 -ci test/lexer.sh
 
 ifneq (shell command nixfmt --help,)

@@ -141,7 +141,7 @@ llvm::Value *BinaryExprAST::codegen() {
     return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
   }
 
-  // If we jave gotten to this point, then Op is a user-defined binary operator
+  // If we have gotten to this point, then Op is a user-defined binary operator
   llvm::Function *F = getFunction(std::string("binary") + Op);
   assert(F);
 
@@ -228,11 +228,12 @@ llvm::Value *CallExprAST::codegen() {
 std::string CallExprAST::toString() {
   std::ostringstream repr("CallExprAST(", std::ios_base::ate);
   repr << Callee << '(';
-  for (auto it = Args.begin(); it != Args.end(); it++)
-    if (it == Args.end() - 1)
-      repr << (*it)->toString() << "))";
-    else
-      repr << (*it)->toString() << ", ";
+  for (auto it = Args.begin(); it != Args.end(); it++) {
+    repr << (*it)->toString();
+    if (it != Args.end() - 1)
+      repr << ", ";
+  }
+  repr << "))";
   return repr.str();
 }
 
@@ -488,12 +489,12 @@ llvm::Function *PrototypeAST::codegen() {
 std::string PrototypeAST::toString() {
   std::ostringstream repr("PrototypeAST(", std::ios_base::ate);
   repr << Name << '(';
-  for (auto it = Args.begin(); it != Args.end(); it++)
-    if (it == Args.end() - 1)
-      repr << *it << ')';
-    else
-      repr << *it << ", ";
-  repr << ')';
+  for (auto it = Args.begin(); it != Args.end(); it++) {
+    repr << *it;
+    if (it != Args.end() - 1)
+      repr << ", ";
+  }
+  repr << "))";
   return repr.str();
 }
 
