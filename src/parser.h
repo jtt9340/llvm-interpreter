@@ -67,6 +67,9 @@ std::unique_ptr<ExprAST> ParseParenExpr();
 /// call
 std::unique_ptr<ExprAST> ParseIdentififerExpr();
 
+/// TODO Documentation
+std::unique_ptr<ExprAST> ParseLetExpr();
+
 /// This function will parse one of the following:
 ///
 ///         (1) A variable reference

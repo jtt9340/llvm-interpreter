@@ -1,4 +1,4 @@
-#include <cstdio>   // std::fputc
+#include <cstdio>   // std::fputc, std::printf
 #include <iostream> // std::cerr, std::endl
 
 #include <llvm/Support/TargetSelect.h> // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser
@@ -25,6 +25,16 @@
 extern "C" DLLEXPORT double putchard(double c) {
   std::fputc(static_cast<char>(c), stderr);
   return 0;
+}
+
+/// Print out a double to standard error. For use as a "standard libary"
+/// function within the interpreter.
+///
+/// @param d the double to print out
+/// @returns the given double
+extern "C" DLLEXPORT double putd(double d) {
+  std::fprintf(stderr, "%f\n", d);
+  return d;
 }
 
 /// Run a REPL for interpreting expressions. This function runs an interactive

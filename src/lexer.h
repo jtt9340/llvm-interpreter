@@ -8,10 +8,10 @@
 enum Token {
   /// EOF: We have reacted the end of the file
   tok_eof = -1,
-  //. An incorrect token was parsed
+  /// An incorrect token was parsed
   tok_err = -2,
 
-  // commands
+  // functions
   /// The "def" keyword
   tok_def = -3,
   /// The "extern" keyword
@@ -39,7 +39,11 @@ enum Token {
   /// The "binary" keyword
   tok_binary = -12,
   /// The "unary" keyword
-  tok_unary = -13
+  tok_unary = -13,
+
+  // user-defined local variables
+  /// the "let" keyword
+  tok_let = -14
 };
 
 /// Return a string representation of enum Token suitable for printing

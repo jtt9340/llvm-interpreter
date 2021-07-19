@@ -1,5 +1,4 @@
 #include <llvm/IR/IRBuilder.h>         // llvm::IRBuilder
-#include <llvm/IR/Instructions.h>      // llvm::PHINode
 #include <llvm/IR/LLVMContext.h>       // llvm::LLVMContext
 #include <llvm/IR/LegacyPassManager.h> // llvm::legacy::FunctionPassManager
 #include <llvm/IR/Module.h>            // llvm::Module
@@ -8,6 +7,7 @@
 #include <llvm/Transforms/Scalar.h>             // llvm::createReassociatePass
 #include <llvm/Transforms/Scalar/GVN.h>         // llvm::createGVNPass
 #include <llvm/Transforms/Scalar/SimplifyCFG.h> // llvm::createCFGSimplificationPass
+#include <llvm/Transforms/Utils.h> // llvm::createPromoteMemoryToRegisterPass
 
 #include <cassert>       // assert
 #include <iostream>      // std::cerr, std::endl
@@ -25,11 +25,13 @@ using llvm::orc::KaleidoscopeJIT;
 static llvm::LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
 static std::unique_ptr<llvm::Module> Module;
-static std::unordered_map<std::string, llvm::Value *> NamedValues;
+static std::unordered_map<std::string, llvm::AllocaInst *> NamedValues;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager;
 static std::unordered_map<std::string, std::unique_ptr<PrototypeAST>>
     FunctionProtos;
 
+/// Get or code generate a function in the current module with the given name,
+/// returning null if there is no such function and code generation fails.
 llvm::Function *getFunction(const std::string &Name) {
   // See if the function with the given name has aready been added to
   // the current module
@@ -46,8 +48,21 @@ llvm::Function *getFunction(const std::string &Name) {
   return nullptr;
 }
 
-/// The constructor for the NumberExprAST class. This constructor just takes a
-/// single parameter: the numeric value that this node of the AST represents.
+/// Create an alloca instruction in the entry block of the given function.
+/// Used for mutable variables.
+llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *Function,
+                                         const std::string &VarName) {
+  // Create an IRBuilder that points to the first instruction of the Function.
+  llvm::IRBuilder<> TmpB(&Function->getEntryBlock(),
+                         Function->getEntryBlock().begin());
+  // Create the alloca with the given name. If we had other types in our
+  // language, we would have to pass in a differnet type besides double here and
+  // probably take that type as a parameter to this funciton.
+  return TmpB.CreateAlloca(llvm::Type::getDoubleTy(Context), 0,
+                           VarName.c_str());
+}
+
+/// The constructor for the NumberExprAST class.
 NumberExprAST::NumberExprAST(double Val) : Val(Val) {}
 
 /// Generate LLVM IR for a numeric constant.
@@ -57,19 +72,14 @@ llvm::Value *NumberExprAST::codegen() {
   return llvm::ConstantFP::get(Context, llvm::APFloat(Val));
 }
 
-/// Return a helpful string representation of this NumberExprAST useful
-/// for debugging.
-///
-/// @return a string of the form "NumberExprAST(%f)", where %f is the value
-///         that this NumberExprAST wraps
-std::string NumberExprAST::toString() {
+/// "NumberExprAST(%f)"
+std::string NumberExprAST::toString() const {
   std::ostringstream repr("NumberExprAST(", std::ios_base::ate);
   repr << Val << ')';
   return repr.str();
 }
 
-/// The constructor for the VariableExprAST class. This constructor just takes a
-/// single parameter: the name of the variable that this AST node represents.
+/// The constructor for the VariableExprAST class.
 VariableExprAST::VariableExprAST(const std::string &Name) : Name(Name) {}
 
 /// Generate LLVM IR for a variable reference.
@@ -80,26 +90,20 @@ llvm::Value *VariableExprAST::codegen() {
   if (!V) {
     std::ostringstream errMsg("Unknown variable name: ", std::ios_base::ate);
     errMsg << Name;
-    LogErrorV(errMsg.str().c_str());
+    return LogErrorV(errMsg.str().c_str());
   }
 
-  return V;
+  return Builder.CreateLoad(V, Name.c_str());
 }
 
-/// Return a helpful string representation of this VariableExprAST useful
-/// for debugging.
-///
-/// @return a string of the form "VariableExprAST(%s)", where %s is the name
-///         of the variable that this VariableExprAST wraps
-std::string VariableExprAST::toString() {
+/// "NumberExprAST(%s)"
+std::string VariableExprAST::toString() const {
   std::ostringstream repr("VariableExprAST(", std::ios_base::ate);
   repr << Name << ')';
   return repr.str();
 }
 
-/// The constructor for the BinaryExprAST class. This constuctor takes in
-/// the character representing the binary operator as well as the expressions
-/// on either side of the operator.
+/// The constuctor for the BinaryExprAST class.
 BinaryExprAST::BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
                              std::unique_ptr<ExprAST> RHS)
     : Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
@@ -139,6 +143,43 @@ llvm::Value *BinaryExprAST::codegen() {
   case '>':
     L = Builder.CreateFCmpUGT(L, R, "cmpugttmp");
     return Builder.CreateUIToFP(L, llvm::Type::getDoubleTy(Context), "booltmp");
+  case '=':
+    // Set up the base error message for future error conditions in this switch
+    // case.
+    std::string RHSS = RHS->toString(), LHSS = LHS->toString();
+    std::ostringstream errMsg("Could not assign value ", std::ios_base::ate);
+    errMsg << RHSS << " to " << LHSS << " beacuse ";
+
+    // For the variable assignment operator =, the LHS is not emitted as an
+    // expression. We require the LHS to be a variable name since it doesn't
+    // make sense to assign a value to another value. Sort of like how C and C++
+    // distinguish between lvalues and rvalues, in this case the only lvalue we
+    // have is a variable name.
+
+    // Call .get() on LHS instead of using the dereference operator -> since we
+    // want to extract the ExprAST from the unique pointer instead of call a
+    // method on the underlying ExprAST.
+
+    // Use dynamic_cast to downcast the underlying ExprAST to a VariableAST.
+    // If we used static_cast and the conversion failed (meaning the LHS was NOT
+    // a variable expression) then that would be undefined behavior, whereas a
+    // dynamic_vast just return nullptr.
+    VariableExprAST *LHSE = dynamic_cast<VariableExprAST *>(LHS.get());
+    if (!LHSE) {
+      errMsg << LHSS << " is not a variable expression.";
+      return LogErrorV(errMsg.str().c_str());
+    }
+
+    // Look up the variable value by name.
+    llvm::Value *Var = NamedValues[LHSE->Name];
+    if (!Var) {
+      errMsg << LHSE->Name << " is an unknown variable name.";
+      return LogErrorV(errMsg.str().c_str());
+    }
+
+    // Create the store instruction.
+    Builder.CreateStore(R, Var);
+    return R;
   }
 
   // If we have gotten to this point, then Op is a user-defined binary operator
@@ -149,21 +190,16 @@ llvm::Value *BinaryExprAST::codegen() {
   return Builder.CreateCall(F, Operands, "binop");
 }
 
-/// Return a helpful string representation of this BinaryExprAST, useful
-/// for debugging.
-///
-/// @return a string of the form "%1$s %c %2$s", where %1$s is the string
-/// representation of the left side of this BinaryExprAST, %2$s is the string
-/// representation of the right side of this BinaryExprAST, and %c is
-/// the binary operator conjoining the left- and right-hand sides of this
-/// BinaryExprAST
-std::string BinaryExprAST::toString() {
+/// "lhs op rhs"
+std::string BinaryExprAST::toString() const {
   return LHS->toString() + ' ' + Op + ' ' + RHS->toString();
 }
 
+/// The constuctor for the UnaryExprAST class.
 UnaryExprAST::UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
     : Op(Opcode), Operand(std::move(Operand)) {}
 
+/// Generate LLVM IR for a unary expression.
 llvm::Value *UnaryExprAST::codegen() {
   llvm::Value *OperandValue = Operand->codegen();
   if (!OperandValue)
@@ -180,15 +216,14 @@ llvm::Value *UnaryExprAST::codegen() {
   return Builder.CreateCall(Operator, OperandValue, "unop");
 }
 
-std::string UnaryExprAST::toString() { return Op + Operand->toString(); }
+/// "op rhs"
+std::string UnaryExprAST::toString() const { return Op + Operand->toString(); }
 
-/// The constructor for the CallExprAST class. This constuctor accepts the name
-/// of the function being called (callee) as well as all the values passed to
-/// the function.
 CallExprAST::CallExprAST(const std::string &Callee,
                          std::vector<std::unique_ptr<ExprAST>> Args)
     : Callee(Callee), Args(std::move(Args)) {}
 
+/// Generate LLVM IR for a function call.
 llvm::Value *CallExprAST::codegen() {
   // A string stream for holding potential error messages.
   std::ostringstream errMsg;
@@ -218,14 +253,8 @@ llvm::Value *CallExprAST::codegen() {
   return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
-/// Return a helpful string representation of this CallExprAST node
-/// useful for debugging.
-///
-/// @return a string of the form "CallExprAST(%1$s(%2$s, %3$s, ..., %n$s))"
-///         where %1$s is the name of the function being called,
-///         and %2$s, %3$s, ..., %n$s are the string representations of the
-///         arguments being passed to this function call
-std::string CallExprAST::toString() {
+/// "CallExprAST(function(arg0, arg1, ..., argn))"
+std::string CallExprAST::toString() const {
   std::ostringstream repr("CallExprAST(", std::ios_base::ate);
   repr << Callee << '(';
   for (auto it = Args.begin(); it != Args.end(); it++) {
@@ -237,22 +266,13 @@ std::string CallExprAST::toString() {
   return repr.str();
 }
 
-/// The constructor for the IfExprAST class. An if expression contains three
-/// components:
-///
-/// 	1. A condition (Cond)
-/// 	2. A then-clause (Then)
-/// 	3. An else-clause (Else)
-///
-/// The else-clause is not optional. This makes the if expression more like an
-/// if expression in functional languages, where each branch of an if statement
-/// must evaluate to a value, or like a tenrary operator in more
-/// statement-oriented languages like C or Java.
+/// The constructor for the IfExprAST class.
 IfExprAST::IfExprAST(std::unique_ptr<ExprAST> Cond,
                      std::unique_ptr<ExprAST> Then,
                      std::unique_ptr<ExprAST> Else)
     : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
 
+/// Generate LLVM IR for an if expression.
 llvm::Value *IfExprAST::codegen() {
   llvm::Value *CondV = Cond->codegen();
   if (!CondV)
@@ -312,17 +332,8 @@ llvm::Value *IfExprAST::codegen() {
   return PhiNode;
 }
 
-/// Return a helpful string representation of this IfExprAST node
-/// useful for debugging.
-///
-/// @return a string of the form "IfExprAST(%1$s
-///         	? %2$s
-///         	: %3$s
-///         )", where %1$s is the string representation of the condition
-///         part of this IfExprAST, %2$s is the string representation of the
-///         then-clause of this IfExprAST, and %$3s is the string representation
-///         of the else-clause of this IfExprAST
-std::string IfExprAST::toString() {
+/// "IfExprAST(cond ? ifTrue : ifFalse)"
+std::string IfExprAST::toString() const {
   std::ostringstream repr("IfExptAST(", std::ios_base::ate);
   repr << Cond->toString() << std::endl
        << "\t? " << Then->toString() << std::endl
@@ -331,6 +342,7 @@ std::string IfExprAST::toString() {
   return repr.str();
 }
 
+/// TODO Brief documentation
 ForExprAST::ForExprAST(const std::string &Name, std::unique_ptr<ExprAST> Start,
                        std::unique_ptr<ExprAST> End,
                        std::unique_ptr<ExprAST> Step,
@@ -338,17 +350,28 @@ ForExprAST::ForExprAST(const std::string &Name, std::unique_ptr<ExprAST> Start,
     : VarName(Name), Start(std::move(Start)), End(std::move(End)),
       Step(std::move(Step)), Body(std::move(Body)) {}
 
+/// Generate LLVM IR for a for expression.
 llvm::Value *ForExprAST::codegen() {
-  // Emit LLVM IR for the initial expression without the
-  // iterator variable in scope
-  llvm::Value *StartVal = Start->codegen();
-  if (!StartVal)
-    return nullptr;
-
   // Generate the basic block for the start of the loop body,
   // taking into account that that block could have multiple
   // blocks (e.g. if statements, more for loops)
   llvm::Function *Function = Builder.GetInsertBlock()->getParent();
+
+  // Create an alloca for the variable in the entry block.
+  // This is required because we allow the user (programmer) to
+  // mutate induction variables in loops.
+  llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(Function, VarName);
+
+  // Emit LLVM IR for the initial expression without the
+  // induction variable in scope
+  llvm::Value *StartVal = Start->codegen();
+  if (!StartVal)
+    return nullptr;
+
+  // Use the alloca instruction we created above to store
+  // StartVal on the stack.
+  Builder.CreateStore(StartVal, Alloca);
+
   llvm::BasicBlock *LoopHeaderBasicBlock = Builder.GetInsertBlock();
   llvm::BasicBlock *LoopBasicBlock =
       llvm::BasicBlock::Create(Context, "loop", Function);
@@ -359,14 +382,10 @@ llvm::Value *ForExprAST::codegen() {
   // Start insterting code into the LoopBasicBlock
   Builder.SetInsertPoint(LoopBasicBlock);
 
-  llvm::PHINode *Variable =
-      Builder.CreatePHI(llvm::Type::getDoubleTy(Context), 2, VarName.c_str());
-  Variable->addIncoming(StartVal, LoopHeaderBasicBlock);
-
   // Save the old value of the variable with this name in case
   // it shadows an earlier one
-  llvm::Value *OldVal = NamedValues[VarName];
-  NamedValues[VarName] = Variable;
+  llvm::AllocaInst *OldVal = NamedValues[VarName];
+  NamedValues[VarName] = Alloca;
 
   // Emit LLVM IR for the loop body. Keep in mind doing this
   // can change the current basic block
@@ -383,15 +402,20 @@ llvm::Value *ForExprAST::codegen() {
     StepVal = llvm::ConstantFP::get(Context, llvm::APFloat(1.0));
   }
 
-  // Add an increment at the end of the loop, similar to manually adding
-  // i++ at the end of a while loop
-  llvm::Value *IncrementedVar =
-      Builder.CreateFAdd(Variable, StepVal, "incremented");
-
   // Emit the conditional expression
   llvm::Value *CondVal = End->codegen();
   if (!CondVal)
     return nullptr;
+
+  // Reload, increment, and store the alloca instruction.
+  // This is necessary because the loop body couuld mutate
+  // the induction variable.
+  llvm::Value *CurrentVal = Builder.CreateLoad(Alloca);
+  // Add an increment at the end of the loop, similar to manually adding
+  // i++ at the end of a while loop
+  llvm::Value *IncrementedVar =
+      Builder.CreateFAdd(CurrentVal, StepVal, "incremented");
+  Builder.CreateStore(IncrementedVar, Alloca);
 
   // Convert condition to a boolean by comparing not-equal to 0.0
   CondVal = Builder.CreateFCmpONE(
@@ -409,8 +433,6 @@ llvm::Value *ForExprAST::codegen() {
   // Insert any new code after the AfterBasicBlock
   Builder.SetInsertPoint(AfterBasicBlock);
 
-  Variable->addIncoming(IncrementedVar, LoopEndBasicBlock);
-
   // Restore the variable that was potentially shadowed before entering the loop
   if (OldVal)
     NamedValues[VarName] = OldVal;
@@ -421,7 +443,7 @@ llvm::Value *ForExprAST::codegen() {
   return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(Context));
 }
 
-std::string ForExprAST::toString() {
+std::string ForExprAST::toString() const {
   std::ostringstream repr("ForExprAST(", std::ios_base::ate);
   repr << VarName << " = " << Start->toString() << ", " << End->toString();
   if (Step)
@@ -430,17 +452,7 @@ std::string ForExprAST::toString() {
   return repr.str();
 }
 
-/// The constructor for the PrototypeAST class.
-///
-/// @param Name the name of the function prototype
-/// @param Args the names of the parameters to the function being represented by
-///        this prototype
-/// @param IsOperator whether or not this Prototype AST node represents a unary
-/// or
-///        binary operator
-/// @param Precedence the precedence of this binary operator if this Prototype
-/// AST
-///        node represents a binary operator
+/// Constructor for the PrototypeAST class.
 PrototypeAST::PrototypeAST(const std::string &Name,
                            std::vector<std::string> Args, bool IsOperator,
                            unsigned Precedence)
@@ -450,6 +462,7 @@ PrototypeAST::PrototypeAST(const std::string &Name,
 /// Getter for the "Name" field of instances of PrototypeAST.
 const std::string &PrototypeAST::getName() const { return Name; }
 
+/// Generate LLVM IR for a function prototype.
 llvm::Function *PrototypeAST::codegen() {
   // All arguments to functions in our language are doubles so create a vector
   // of "N" LLVM double types where N is the number of arguments in the function
@@ -479,14 +492,8 @@ llvm::Function *PrototypeAST::codegen() {
   return F;
 }
 
-/// Return a helpful string representation of this PrototypeAST node
-/// useful for debugging.
-///
-/// @return a string of the form "PrototypeAST(%1$s(%2$s, %3$s, ..., %n$s))"
-///         where %1$s is the name of the function that this PrototypeAST
-///         represents, and %2$s, %3$s, ..., %n$s are the names of the formal
-///         parameters of this PrototypeAST
-std::string PrototypeAST::toString() {
+/// "PrototypeAST(function(arg0, arg1, ..., argn))"
+std::string PrototypeAST::toString() const {
   std::ostringstream repr("PrototypeAST(", std::ios_base::ate);
   repr << Name << '(';
   for (auto it = Args.begin(); it != Args.end(); it++) {
@@ -498,23 +505,27 @@ std::string PrototypeAST::toString() {
   return repr.str();
 }
 
+/// Is this a function prototype for a unary operator?
 bool PrototypeAST::isUnaryOp() const { return IsOperator && Args.size() == 1; }
 
+/// Is this a function prototype for a binary operator?
 bool PrototypeAST::isBinaryOp() const { return IsOperator && Args.size() == 2; }
 
+/// If this is a unary or binary operator, then the character representing the
+/// operator, else the NUL byte.
 char PrototypeAST::getOperatorName() const {
   return isUnaryOp() || isBinaryOp() ? Name[Name.size() - 1] : 0;
 }
 
+/// Return the precedence of thhis binary operator (if this is a binary
+/// operator).
 unsigned PrototypeAST::getBinaryPrecedence() const { return Precedence; }
 
-/// The constructor for the FunctionAST class. This constructor takes in the
-/// funciton prototype part of this function definition followed by the
-/// code that defines the behavior of the function.
 FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
                          std::unique_ptr<ExprAST> Body)
     : Proto(std::move(Proto)), Body(std::move(Body)) {}
 
+/// Generate LLVM IR for a function definition.
 llvm::Function *FunctionAST::codegen() {
   const auto &P = *Proto;
   FunctionProtos[Proto->getName()] = std::move(Proto);
@@ -547,8 +558,19 @@ llvm::Function *FunctionAST::codegen() {
 
   // Record the function arguments in the NamedValues map.
   NamedValues.clear();
-  for (auto &Arg : Function->args())
-    NamedValues.emplace(Arg.getName(), &Arg);
+  for (auto &Arg : Function->args()) {
+    // Create an alloca for this function argument.
+    // This allows the user (programmer) to mutate
+    // function parameters.
+    llvm::AllocaInst *Alloca =
+        CreateEntryBlockAlloca(Function, Arg.getName().str());
+
+    // Store the passed-in parameter value in the alloca instruction.
+    Builder.CreateStore(&Arg, Alloca);
+
+    // Add arguments to the current scope.
+    NamedValues[Arg.getName().str()] = Alloca;
+  }
 
   // Generate the LLVM IR for the root expression of this function.
   if (llvm::Value *RetVal = Body->codegen()) {
@@ -572,18 +594,85 @@ llvm::Function *FunctionAST::codegen() {
   return nullptr;
 }
 
-/// Return a helpful string representation of this FunctionAST node useful
-/// for debugging.
-///
-/// @return a string of the form "FunctionAST(
-///         	%1$s,
-///         	%2$s
-///         )", where %1$s is the string representation of this FunctionAST's
-///         prototype, and %2$s is the string representation of this
-///         FunctionAST's body
-std::string FunctionAST::toString() {
+/// "FunctionAST(prototype, body)"
+std::string FunctionAST::toString() const {
   std::ostringstream repr("FunctionAST(\n\t", std::ios_base::ate);
   repr << Proto->toString() << ",\n\t" << Body->toString() << std::endl << ')';
+  return repr.str();
+}
+
+LetExprAST::LetExprAST(
+    std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
+    std::unique_ptr<ExprAST> Body)
+    : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
+
+/// Generate LLVM IR for a let/in expression.
+llvm::Value *LetExprAST::codegen() {
+  // If we encounter any new variables that shadow existing ones,
+  // we put the old values here so that they can be restored after
+  // the new ones go out of scope.
+  std::vector<llvm::AllocaInst *> OldBindings(VarNames.size());
+
+  llvm::Function *Function = Builder.GetInsertBlock()->getParent();
+
+  for (const auto &NameValuePair : VarNames) {
+    const std::string &VarName = NameValuePair.first;
+    ExprAST *const InitialExpr = NameValuePair.second.get();
+
+    // We generate LLVM IR for the initial value before
+    // adding the variable to the scope, this way self-referential
+    // variable declarations are errors (let a = a)
+    // and declarations like the following are possible:
+    //
+    //    let a = 1 in
+    //      let a = a in # Refers to outer a
+    //        a;
+    llvm::Value *InitialValue =
+        InitialExpr ? InitialExpr->codegen()
+                    // If no value for the variable was given,
+                    // initialize to 0.0.
+                    : llvm::ConstantFP::get(Context, llvm::APFloat(0.0));
+    if (!InitialValue)
+      return nullptr;
+
+    llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(Function, VarName);
+    Builder.CreateStore(InitialValue, Alloca);
+
+    // Add any old value for this variable so that it can be restored after
+    // unrecursing.
+    OldBindings.push_back(NamedValues[VarName]);
+
+    // Now add this variable to the current scope.
+    NamedValues[VarName] = Alloca;
+  }
+
+  // Now that we've created the variable, we can emit the body.
+  llvm::Value *BodyVal = Body->codegen();
+  if (!BodyVal)
+    return nullptr;
+
+  // Restore all the old values of the variables.
+  for (unsigned i = 0; i < VarNames.size(); i++)
+    NamedValues[VarNames[i].first] = OldBindings[i];
+
+  // Return the value that the body evaluates to.
+  return BodyVal;
+}
+
+/// "LetExprAST(var0 = val0, var1 = val1, ..., varn = valn; body)"
+std::string LetExprAST::toString() const {
+  std::ostringstream repr("LetExprAST(\n", std::ios_base::ate);
+  for (auto it = VarNames.begin(); it != VarNames.end(); it++) {
+    const auto VarName = it->first;
+    const auto *InitialExpr = it->second.get();
+
+    repr << '\t' << VarName << " = "
+         << (InitialExpr ? InitialExpr->toString()
+                         : NumberExprAST(0.0).toString())
+         << (it == VarNames.end() - 1 ? ';' : ',') << '\n';
+  }
+
+  repr << '\t' << Body->toString() << "\n)";
   return repr.str();
 }
 
@@ -602,6 +691,8 @@ void InitializeModuleAndPassManager() {
   // Isn't it crazy that all of these optimizations are built into LLVM and it's
   // just a matter of "ooh pick this optimization"?
 
+  // Turn alloca instructions into registers. (mem2reg)
+  FunctionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
   // Add an optimization that can combine obvious duplicate expressions, e.g.
   // (1+2+x)*(x+2+1) becomes (x+3)*(x+3)
   FunctionPassManager->add(llvm::createInstructionCombiningPass());

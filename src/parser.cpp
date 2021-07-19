@@ -17,7 +17,8 @@ void SetupBinopPrecedences() {
   // Create the binary operators, specifying their precedences.
   // The lower the number, the lower the precedence.
   // TODO: Add more binary operators
-  BinopPrecedence['<'] = 10; // Lowest precedence
+  BinopPrecedence['='] = 2; // Lowest precedence
+  BinopPrecedence['<'] = 10;
   BinopPrecedence['>'] = 10;
   BinopPrecedence['+'] = 20;
   BinopPrecedence['-'] = 20;
@@ -86,13 +87,81 @@ std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   return std::make_unique<CallExprAST>(IdName, std::move(Args));
 }
 
+/// letexpr ::= 'let' identifier ('=' expression)?
+///         (',' identifier ('=' expression)?)* 'in' expression
+std::unique_ptr<ExprAST> ParseLetExpr() {
+  getNextToken(); // Consume the "let" token.
+
+  std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames;
+  int curtok;
+
+  // At least one variable name is required.
+  if ((curtok = getCurrentToken()) != tok_identifier) {
+    std::ostringstream errMsg;
+    errMsg << "Expected " << tokenToString(tok_identifier) << " after "
+           << tokenToString(tok_let) << " but instead got "
+           << tokenToString(static_cast<Token>(curtok));
+    return LogError(errMsg.str().c_str());
+  }
+
+  loop {
+    const std::string VarName = getIdentifierStr();
+    getNextToken(); // Consume the identifier we just read.
+
+    // Read the optional initializer
+    std::unique_ptr<ExprAST> InitialValue;
+    if ((curtok = getCurrentToken()) == '=') {
+      getNextToken(); // Consume the '='.
+
+      InitialValue = ParseExpression();
+      if (!InitialValue)
+        return nullptr;
+    }
+
+    VarNames.push_back(std::make_pair(VarName, std::move(InitialValue)));
+
+    // Break if there are no more variables being declared.
+    if ((curtok = getCurrentToken()) != ',')
+      break;
+    getNextToken(); // Consume the ','.
+
+    if ((curtok = getCurrentToken()) != tok_identifier) {
+      std::ostringstream errMsg;
+      errMsg << "Expected " << tokenToString(tok_identifier)
+             << "after ',' but instead got "
+             << tokenToString(static_cast<Token>(curtok));
+      return LogError(errMsg.str().c_str());
+    }
+  }
+
+  // At this point we have parsed all the variable declarations and their
+  // optional initializers, so we are looking for the 'in' keyword.
+  if ((curtok = getCurrentToken()) != tok_in) {
+    std::ostringstream errMsg(
+        "Expected 'in' keyword after 'let' keyword but instead got: ",
+        std::ios_base::ate);
+    errMsg << tokenToString(static_cast<Token>(curtok));
+    return LogError(errMsg.str().c_str());
+  }
+  getNextToken(); // Consume the 'in' keyword.
+
+  auto Body = ParseExpression();
+  if (!Body)
+    return nullptr;
+
+  return std::make_unique<LetExprAST>(std::move(VarNames), std::move(Body));
+}
+
 /// primary
 ///   ::= identifierexpr
 ///   ::= numberexpr
 ///   ::= parenexpr
+///   ::= ifexpr
+///   ::= forexpr
+///   ::= varexpr
 /// Determine the type of expression we are parsing.
 std::unique_ptr<ExprAST> ParsePrimary() {
-  switch (getCurrentToken()) {
+  switch (int curtok = getCurrentToken()) {
   case tok_identifier:
     return ParseIdentifierExpr();
   case tok_number:
@@ -103,8 +172,14 @@ std::unique_ptr<ExprAST> ParsePrimary() {
     return ParseIfExpr();
   case tok_for:
     return ParseForExpr();
-  default:
-    return LogError("unknown token when expecting an expression");
+  case tok_let:
+    return ParseLetExpr();
+  default: {
+    std::ostringstream errMsg(tokenToString(static_cast<Token>(curtok)),
+                              std::ios_base::ate);
+    errMsg << " when expecting an expression";
+    return LogError(errMsg.str().c_str());
+  }
   }
 }
 

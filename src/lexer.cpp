@@ -53,6 +53,21 @@ const std::string tokenToString(Token tok) {
   case tok_else:
     output << "else";
     break;
+  case tok_for:
+    output << "for";
+    break;
+  case tok_in:
+    output << "in";
+    break;
+  case tok_binary:
+    output << "binary";
+    break;
+  case tok_unary:
+    output << "unary";
+    break;
+  case tok_let:
+    output << "let";
+    break;
   default:
     output << "unrecognized token " << static_cast<char>(tok);
   }
@@ -106,19 +121,13 @@ static int gettok() {
       return tok_binary;
     if (IdentifierStr == "unary")
       return tok_unary;
+    if (IdentifierStr == "let")
+      return tok_let;
     return tok_identifier;
   }
 
   // Parse numeric values and store them in NumVal
   std::string NumStr;
-
-  /*
-          // TODO: Handle negative numbers
-          if (LastChar == '-') {
-                  NumStr += LastChar;
-                  LastChar = std::getchar();
-          }
-  */
 
   if (LastChar == '.') {
     // If the numeric value started with a '.', then we must accept at least one
@@ -133,7 +142,7 @@ static int gettok() {
       return tok_err;
 
     // Additional byte storage for the parts of NumStr that couldn't be parsed
-    // as a number Used to indicate an invalid number token
+    // as a number, used to indicate an invalid number token
     char *NumStrEnd = nullptr;
 
     NumVal = std::strtod(NumStr.c_str(), &NumStrEnd);

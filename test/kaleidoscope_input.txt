@@ -36,6 +36,7 @@ factorial(4);
 
 3>4;
 
+# Given the ASCII code for a character, print out that character.
 extern putchard(X);
 
 putchard(74);
@@ -72,13 +73,7 @@ def binary & 6(LHS RHS)
 	else
 		!!RHS; # Convert RHS to a 0/1 with !!
 
-# Equality operator
-def binary = 9 (LHS RHS)
-	!(LHS < RHS | LHS > RHS);
-
-# Sequence several functions together
-def binary : 1(x y) y;
-
+# Absolute value.
 def abs(v)
     if v > 0 then
         v
@@ -87,3 +82,28 @@ def abs(v)
 
 abs(32);
 abs(-32);
+
+# Sequence several functions together
+def binary : 1(x y) y;
+
+# Get the nth fibonacci number
+def fib(n)
+  let a = 1, b = 1, c in
+  (for i = 3, i < n in
+    c = a + b :
+    a = b :
+    b = c) :
+  b;
+
+# Get the 10th fibonacci number
+fib(10);
+
+# Print out the value of a double.
+extern putd(D);
+
+def can_assign(x)
+  putd(x) :
+  x = 4 :
+  putd(x);
+
+can_assign(123);
