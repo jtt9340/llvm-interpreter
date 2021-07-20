@@ -342,7 +342,7 @@ std::string IfExprAST::toString() const {
   return repr.str();
 }
 
-/// TODO Brief documentation
+/// The constructor for the ForExprAST class.
 ForExprAST::ForExprAST(const std::string &Name, std::unique_ptr<ExprAST> Start,
                        std::unique_ptr<ExprAST> End,
                        std::unique_ptr<ExprAST> Step,
@@ -443,6 +443,7 @@ llvm::Value *ForExprAST::codegen() {
   return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(Context));
 }
 
+/// "ForExprAST(var = init, cond, step, body)"
 std::string ForExprAST::toString() const {
   std::ostringstream repr("ForExprAST(", std::ios_base::ate);
   repr << VarName << " = " << Start->toString() << ", " << End->toString();
@@ -601,6 +602,7 @@ std::string FunctionAST::toString() const {
   return repr.str();
 }
 
+/// The constructor for the LetExprAST class.
 LetExprAST::LetExprAST(
     std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
     std::unique_ptr<ExprAST> Body)
@@ -709,6 +711,7 @@ void InitializeModuleAndPassManager() {
   FunctionPassManager->doInitialization();
 }
 
+/// What to do when a function definition is encountered at the REPL.
 void HandleDefinition() {
   const auto defn = ParseDefinition();
   if (defn) {
@@ -726,6 +729,7 @@ void HandleDefinition() {
   }
 }
 
+/// What to do when an extern function delcaration is encountered at the REPL.
 void HandleExtern() {
   auto externDeclaration = ParseExtern();
   if (externDeclaration) {
@@ -744,6 +748,8 @@ void HandleExtern() {
   }
 }
 
+/// What to do when any other expression that is not a function definition or
+/// extern function declaration is encountered at the REPL.
 void HandleTopLevelExpression() {
   // Evaluate a top-level expression in an anonymous function.
   const auto expr = ParseTopLevelExpr();

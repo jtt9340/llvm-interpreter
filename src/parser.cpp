@@ -13,6 +13,8 @@ static std::unordered_map<char, int> BinopPrecedence;
 /// Is c an ASCII character, assuming an ASCII or UTF-8 encoding?
 static inline bool isascii(const char c) { return c > 0 || c < 128; }
 
+/// Update the internal binary operator precedence table with the appropriate
+/// values.
 void SetupBinopPrecedences() {
   // Create the binary operators, specifying their precedences.
   // The lower the number, the lower the precedence.
@@ -26,6 +28,7 @@ void SetupBinopPrecedences() {
   BinopPrecedence['/'] = 40; // Highest precedence
 }
 
+/// Add a new binary operator with the given precedence.
 int InstallBinopPrecedence(const char Op, const int Precedence) {
   return BinopPrecedence[Op] = Precedence;
 }
@@ -194,6 +197,9 @@ int GetTokPrecedence() {
   return TokPrec <= 0 ? -1 : TokPrec;
 }
 
+/// unary
+///		::= primary
+///		::= '!' unary
 std::unique_ptr<ExprAST> ParseUnary() {
   const int CurTok = getCurrentToken();
   // If CurTok is NOT an ASCII character, assuming an ASCII or UTF-8 encoding
@@ -259,7 +265,6 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 
 /// expression
 ///   ::= unary binoprhs
-///
 std::unique_ptr<ExprAST> ParseExpression() {
   auto LHS = ParseUnary();
   // Attempt to parse an expression; if it is successfull (a valid token)

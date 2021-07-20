@@ -194,28 +194,94 @@ def binary & 6(LHS RHS)
 	else
 		!!RHS; # Convert RHS to a 0/1 with !!
 
-# Back in the "Comparison Operators" section I said only < and > were built into the language, but we can define =, the
-# equality operator (NOT the assignment operator). Two numbers are considered equal if neither is greater nor less than
-# the other.
-def binary = 9 (LHS RHS)
-	!(LHS < RHS | LHS > RHS);
+# Chain several functions together, similar to a ; in C.
+# Since its precendece is so low every other operator will
+# be evaluated before it.
+def binary : 1(x y) y;
 
-# In this example, & has higher precedence over |, so this parses as
-#
-# (3 = 3.3) | ( (2 + 2 = 5) & (-20 / 2 = 3 - 13) ) | (1 = 1)
-#
-# rather than
-#
-# ( (3 = 3.3) | (2 + 2 = 5) ) & ( (-20 / 2 = 3 - 13) | (1 = 1) )
-(3 = 3.3) | (2 + 2 = 5) & (-20 / 2 = 3 - 13) | (1 = 1)
+def print_three_letters()
+	putchard(65) :
+	putchard(67) :
+	putchard(69) ;
 ``` 
 
+### Variables
+Oh, you can define local variables too :simple_smile:. In additon to using the `=` operator to mutate
+function parameters and the loop variable in for expressions, you can use the `let`/`in` syntax
+popular in functional languages like Haskell and OCaml. The `let`/`in` syntax is as follows:
+
+`let var0 [ = init0 ], var1 [ = init1 ], ..., varN [ = initN] in body;`
+
+Any number of variables can be declared in a single `let` statement as long
+as there is at least one. The square brackets are not part of the syntax but rather
+are used to indicate that initializer expressions for variables are optional. If
+a variable is not initialized to a specific value then 0.0 is assumed. The variables
+you define are visible only inside of the `body` expression.
+
+You can define variables with the same name as variables already in scope; this is called _shadowing_
+and makes the variable you define "shadow" or "overtake" the existing one with the same name:
+
+```
+def foreshadow(a)
+	putchard(a) : # Prints the ASCII character of a the parameter
+	let a = 78 in
+	putchard(a) ; # Prints the ASCII character of a the local variable
+```
+
+More examples below.
+
+```
+def print_three_letters_v2(i)
+	putchard(i) :
+	# Admittedly there is no need to mutate i
+	# here as we could just call + when passing
+	# it to putchard, but I want to demonstrate
+	# mutating functoon parameters.
+	i = i + 2   :
+	putchard(i) :
+	i = i + 3   :
+	putchard(i) ;
+
+# Get the nth fibonacci number
+def fib(n)
+	# Variables must be declared with
+	# "let" before being used.
+	# Variable definitions are
+	# separated from the scope they appear
+	# in with the "in" keyword.
+	# Here we mutate a, b, and c
+	# in the for loop body to generate the
+	# nth fibonacci number.
+	let a = 1, b = 1, c in
+	(for i = 3, i < n in
+		c = a + b :
+		a = b :
+		b = c) :
+	b;
+```
 
 You can find the syntax of Kaleidoscope altogether in the sample file [test/kaleidoscope_input.txt](test/kaleidoscope_input.txt).
 
 ## Building From Source
 Ensure LLVM is installed on your machine. I've been building this against LLVM version 11.1.0; it might build with newer versions
 but I have not tested that. On a Mac with [Homebrew]: `brew install llvm@11`.
+
+Alternatively, if you are on [NixOS][NixOS], there is a [shell.nix](shell.nix) in the root of this repository
+that _should_ have everything you need to work on this. Simply run the command
+
+```Bash
+nix-shell --pure --arg pkgs 'import <nixpkgs> {}'
+```
+
+from the root of this repository and you will enter a shell with all the necessary programs and libraries installed.
+Optionally you can specify a version of LLVM with something like
+
+```Bash
+nix-shell --pure --arg pkgs 'import <nixpkgs> {}' --arg llvm 'pkgs.llvmPackages_12'
+```
+
+but like I said I haven't tested this with anything besides version 11, which is the default
+in the Nix shell if not specified.
 
 The project is controlled by a single Makefile. In the root of this repository, run
 
@@ -244,6 +310,7 @@ make examples
 The resulting binaries will be found in `target/debug`.
 
 There is also a `make` target for formatting code:
+
 ```Bash
 make fmt
 ```
@@ -255,9 +322,9 @@ Finally, there is a rudimentary test that tests the lexer and that the interpret
 ```Bash
 make test
 ```
-
 [LLVM Tutorial]: https://llvm.org/docs/tutorial/index.html
 [Homebrew]: https://brew.sh
+[NixOS]: https://nixos.org
 [LLDB]: https://lldb.llvm.org
 [AddressSanitizer]: https://github.com/google/sanitizers/wiki/AddressSanitizer
 [UBSan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html

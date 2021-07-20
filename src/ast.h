@@ -8,9 +8,11 @@
 #include <vector>  // std::vector
 
 /// An interface for objects that can convert themselves
-/// into a string representation for debugging
+/// into a string representation for debugging.
 struct Showable {
-  /// Return a string representation of this object
+  /// Return a string representation of this object.
+  ///
+  /// @return a string representation of this object useful for debugging
   virtual std::string toString() const {
     // Default implementation is to just return the memory
     // address of this object as a string
@@ -33,13 +35,17 @@ public:
 };
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
+///
+/// This AST node just holds a single double value to represent a numeric
+/// literal.
 class NumberExprAST : public ExprAST {
   /// The particular number this NumberExprAST is storing.
   double Val;
 
 public:
-  /// The constructor for the NumberExprAST class. This constructor just takes a
-  /// single parameter: the numeric value that this node of the AST represents.
+  /// The constructor for the NumberExprAST class.
+  ///
+  /// @param Val the numeric value that this node of the AST represents
   explicit NumberExprAST(double Val);
 
   /// Generate LLVM IR for a numeric constant.
@@ -54,13 +60,16 @@ public:
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
+///
+/// This AST node just hold the name of a variable reference.
 struct VariableExprAST : public ExprAST {
   /// The name of the variable.
   const std::string Name;
 
-  /// The constructor for the VariableExprAST class. This constructor just takes
-  /// a single parameter: the name of the variable that this AST node
-  /// represents.
+  /// The constructor for the VariableExprAST class.
+  ///
+  /// @param Name the name of the variable that this AST node
+  /// represents
   explicit VariableExprAST(const std::string &Name);
 
   /// Generate LLVM IR for a variable reference.
@@ -75,6 +84,9 @@ struct VariableExprAST : public ExprAST {
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
+///
+/// This AST node stores a binary operator and two other AST nodes that the
+/// binary operator acts upon.
 class BinaryExprAST : public ExprAST {
   /// The particular operator.
   char Op;
@@ -85,6 +97,10 @@ public:
   /// The constructor for the BinaryExprAST class. This constuctor takes in
   /// the character representing the binary operator as well as the expressions
   /// on either side of the operator.
+  ///
+  /// @param op the binary operator
+  /// @param LHS the left-hand-side of the binary operator
+  /// @param RHS the right-hand-side of the binary operator
   BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
                 std::unique_ptr<ExprAST> RHS);
 
@@ -103,6 +119,9 @@ public:
 };
 
 /// UnaryExprAST - Expression class for a unary operator.
+///
+/// This AST node stores a unary operator and other AST node
+/// that the unary operator acts upon.
 class UnaryExprAST : public ExprAST {
   /// The particular operator.
   char Op;
@@ -113,16 +132,26 @@ public:
   /// The constructor for the UnaryExprAST class. This constuctor takes in the
   /// operator that this unary expression represents as well as the AST node for
   /// operand being acted upon.
+  ///
+  /// @param Opcode the unary operator
+  /// @param Operand the expression being acted upon
   UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand);
 
   /// Generate LLVM IR for a unary expression.
   llvm::Value *codegen() override;
 
-  /// TODO Documentation
+  /// Return a helpful string representation of this UnaryExprAST, useful for
+  /// debugging.
+  ///
+  /// @return a string of the form  "%c %s", where %c is the unary operator and
+  /// %s is a string representation of the operand
   std::string toString() const override;
 };
 
 /// CallExprAST - Expression class for function calls.
+///
+/// This AST node stores the name of the function being called and
+/// the arguments being passed.
 class CallExprAST : public ExprAST {
   /// The function being called.
   std::string Callee;
@@ -133,6 +162,9 @@ public:
   /// The constructor for the CallExprAST class. This constuctor accepts the
   /// name of the function being called (callee) as well as all the values
   /// passed to the function.
+  ///
+  /// @param Callee the name of the function being called
+  /// @param Args the arguments passed to the function
   CallExprAST(const std::string &Callee,
               std::vector<std::unique_ptr<ExprAST>> Args);
 
@@ -150,6 +182,17 @@ public:
 };
 
 /// IfExprAST - Expression for if expressions (similar to C's ternary operator)
+///
+/// An if expression contains three components:
+///
+/// 	1. A condition (Cond)
+/// 	2. A then-clause (Then)
+/// 	3. An else-clause (Else)
+///
+/// The else-clause is not optional. This makes the if expression more like an
+/// if expression in functional languages, where each branch of an if
+/// statement must evaluate to a value, or like a tenrary operator in more
+/// statement-oriented languages like C or Java.
 class IfExprAST : public ExprAST {
   std::unique_ptr<ExprAST> Cond; ///< The condition to evaluate
   std::unique_ptr<ExprAST> Then; ///< The expression to evaluate if Cond
@@ -158,17 +201,11 @@ class IfExprAST : public ExprAST {
       Else; ///< The expression to evaluate if Cond evalutates to 0.0
 
 public:
-  /// The constructor for the IfExprAST class. An if expression contains three
-  /// components:
+  /// The constructor for the IfExprAST class.
   ///
-  /// 	1. A condition (Cond)
-  /// 	2. A then-clause (Then)
-  /// 	3. An else-clause (Else)
-  ///
-  /// The else-clause is not optional. This makes the if expression more like an
-  /// if expression in functional languages, where each branch of an if
-  /// statement must evaluate to a value, or like a tenrary operator in more
-  /// statement-oriented languages like C or Java.
+  /// @param Cond the condition that the if expression evaluates
+  /// @param Then the code to evaluate if the condition is true
+  /// @param Else the code to evaluate if the condition is false
   IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
             std::unique_ptr<ExprAST> Else);
 
@@ -210,7 +247,25 @@ class ForExprAST : public ExprAST {
   std::unique_ptr<ExprAST> Body; ///< The code contained within the for loop
 
 public:
-  /// TODO Documentation
+  /// The constructor for the ForExprAST class. A for expression has the
+  /// following:
+  ///
+  ///   1. An initializer expression, which declares an...
+  ///   2. ...induction variable
+  ///   3. A conditional expression that determines when the loop ends
+  ///   4. An optional step that determines how much to increment the
+  ///      induction variable by at the end of each iteration
+  ///   5. A body (what gets run inside the loop)
+  ///
+  /// This constructor takes all five pieces of information to create
+  /// an AST node represeing this.
+  ///
+  /// @param VarName the name of the induction variable
+  /// @param Start AST node for the initial expression
+  /// @param End AST node for the condition
+  /// @param Step AST node of the value that the induction variable will be
+  /// incremented by
+  /// @param Body the body of the for expression
   ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
              std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
              std::unique_ptr<ExprAST> Body);
@@ -218,7 +273,16 @@ public:
   /// Generate LLVM IR for a for expression.
   llvm::Value *codegen() override;
 
-  /// TODO Documentation
+  /// Return a helpful string representation of this ForExprAST node
+  /// useful for debugging.
+  ///
+  /// @return a string of the form "ForExprAST(%1$s = %2$s, %$3s, %$4s,
+  ///		%$5s
+  /// )" where %1$s is the induction variable for this ForExprAST,
+  /// %$2s is the string representation of the initializer expression,
+  /// %$3s is the string representation of the conditional expression,
+  /// %$4s is the string representation of the step amount, if present,
+  /// and finally %$5s is the string representation of the body.
   std::string toString() const override;
 };
 
@@ -241,14 +305,11 @@ public:
   ///
   /// @param Name the name of the function prototype
   /// @param Args the names of the parameters to the function being represented
-  /// by
-  ///        this prototype
+  ///        by this prototype
   /// @param IsOperator whether or not this Prototype AST node represents a
-  /// unary or
-  ///        binary operator
+  ///        unary or binary operator
   /// @param Precedence the precedence of this binary operator of this Prototype
-  /// AST
-  ///        node represents a binary operator
+  ///        AST node represents a binary operator
   PrototypeAST(const std::string &Name, std::vector<std::string> Args,
                bool IsOperator = false, unsigned Precedence = 0);
 
@@ -298,8 +359,11 @@ class FunctionAST : public Showable {
 
 public:
   /// The constructor for the FunctionAST class. This constructor takes in the
-  /// funciton prototype part of this function definition followed by the
+  /// function prototype part of this function definition followed by the
   /// code that defines the behavior of the function.
+  ///
+  /// @param Proto the function prototype for this function definition
+  /// @param the body of the function
   FunctionAST(std::unique_ptr<PrototypeAST> Proto,
               std::unique_ptr<ExprAST> Body);
 
@@ -319,6 +383,9 @@ public:
 };
 
 /// LetExprAST - A "let"/"in" expression for defining local variables.
+///
+/// A LetExprAST node contains a vector of pairs mapping variable names
+/// to values and a body that uses those variables.
 class LetExprAST : public ExprAST {
   /// All the variable names paired with the values.
   /// For example the let statement
@@ -338,7 +405,10 @@ class LetExprAST : public ExprAST {
   std::unique_ptr<ExprAST> Body;
 
 public:
-  /// TODO Documentation
+  /// The constructor for the LetExprAST class.
+  ///
+  /// @param VarNames the variable names and values for the let/in expression
+  /// @param Body the body of the let/in expression.
   LetExprAST(
       std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
       std::unique_ptr<ExprAST> Body);
@@ -346,7 +416,19 @@ public:
   /// Generate LLVM IR for a let/in expression.
   llvm::Value *codegen() override;
 
-  /// TODO Documentation
+  /// Return a helpful string representation of this LetExprAST node
+  /// useful for debugging.
+  ///
+  /// @return a string of the form "LetExprAST(
+  ///		%1$s = %2$s,
+  ///		%3$s = %4$s,
+  ///		...,
+  ///		%n$s = %(n + 1)$s;
+  ///		%s
+  /// )" where %$is, where i is an odd integer, is the name of a variable,
+  /// %$(i + 1)s, where i is an odd integer, is the string representation
+  /// of the value of that variable, if given, and %s is the string
+  /// representation of the body of this LetExprAST.
   std::string toString() const override;
 };
 
