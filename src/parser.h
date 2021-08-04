@@ -1,7 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "ast.h"
+#include "ExprAST.h"
+#include "FunctionAST.h"
 
 /// Update the internal binary operator precedence table with the appropriate
 /// values.

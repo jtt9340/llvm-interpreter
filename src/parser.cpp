@@ -1,11 +1,19 @@
-#include <sstream> // std::ostringstream
-#include <unordered_map>
+#include <sstream>       // std::ostringstream
+#include <unordered_map> // std::unordered_map
 
 #include "lexer.h"
-#include "logging.h"
 #include "parser.h"
+#include "util.h"
 
-#define loop for (;;) // Infinite loop
+#include "BinaryExprAST.h"
+#include "CallExprAST.h"
+#include "ExprAST.h"
+#include "ForExprAST.h"
+#include "IfExprAST.h"
+#include "LetExprAST.h"
+#include "NumberExprAST.h"
+#include "UnaryExprAST.h"
+#include "VariableExprAST.h"
 
 // This holds the precedence for each binary operator that is defined
 static std::unordered_map<char, int> BinopPrecedence;

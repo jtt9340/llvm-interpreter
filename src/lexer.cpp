@@ -8,13 +8,8 @@
 
 #include <llvm/IR/Function.h> // llvm::Function
 
-#include "ast.h"   // class ExprAST, class NumberExprAST, class VariableExprAST,
-                   // class BinaryExprAST, class CallExprAST, class PrototypeAST
-                   // class FunctionAST
 #include "lexer.h" // gettok, enum Token
-#include "logging.h" // LogError, LogErrorP
-
-#define loop for (;;) // Infinite loop
+#include "util.h"  // loop, LogError, LogErrorP
 
 static std::string IdentifierStr; // Filled in if tok_identifier
 static double NumVal;             // Filled in if tok_number

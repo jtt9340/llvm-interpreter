@@ -5,6 +5,23 @@
 #
 UNAME := $(shell uname)
 
+ifeq ($(UNAME),Darwin)
+remove-executables =                           \
+	if [ -d $(1) ]; then                       \
+		find $(1) -type f -perm +111 -delete;  \
+	fi
+else
+remove-executables =                           \
+	if [ -d $(1) ]; then                       \
+		find $(1) -executable -type f -delete; \
+	fi
+endif
+
+remove-if-exists =       \
+	if [ -d $(1) ]; then \
+		rmdir $(1);      \
+	fi
+
 #
 # Compiler flags
 #
@@ -22,16 +39,15 @@ endif
 #
 # Project files
 #
-
-# Update this variable as more files are added to the project
-SRCS =	src/ast.cpp src/KaleidoscopeJIT.cpp src/lexer.cpp src/logging.cpp src/main.cpp src/parser.cpp
+SRCS =	$(wildcard src/*.cpp)
 OBJS =	$(SRCS:src/%.cpp=%.o)
+TARGET =	target
 EXE =	kaleidoscope
 
 #
 # Debug build settings
 #
-DBGDIR =	target/debug
+DBGDIR =	$(TARGET)/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
 DBGCFLAGS =	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -41,7 +57,7 @@ DBGCFLAGS =	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 #
 # Release build settings
 #
-RELDIR =	target/release
+RELDIR =	$(TARGET)/release
 RELEXE =	$(RELDIR)/$(EXE)
 RELOBJS =	$(addprefix $(RELDIR)/, $(OBJS))
 RELCFLAGS =	-O2 -DNDEBUG
@@ -49,29 +65,21 @@ RELCFLAGS =	-O2 -DNDEBUG
 #
 # Example build settings
 #
+EXAMPLESRCS =	$(wildcard $(EXAMPLEDIR)/*.cpp)
 EXAMPLEDIR =	examples
 EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 
-.PHONY:	all clean realclean remove-executables debug release prep remake test examples fmt fmt-helper
-
-# Default build
-all:	prep release
-
 #
-# Debug rules
+# Test build settings
 #
-debug:	$(DBGEXE)
+TEST =	test
 
-$(DBGEXE):	$(DBGOBJS)
-	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^
-
-$(DBGDIR)/%.o:	src/%.cpp
-	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $@ $<
+.PHONY:	clean realclean debug release remake test examples fmt
 
 #
 # Release rules
 #
-release:	$(RELEXE)
+release:	$(RELDIR) $(RELEXE)
 
 $(RELEXE):	$(RELOBJS)
 	$(CXX) $(CXXFLAGS) $(RELCFLAGS) -o $(RELEXE) $^
@@ -80,9 +88,20 @@ $(RELDIR)/%.o:	src/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
 
 #
+# Debug rules
+#
+debug:	$(DBGDIR) $(DBGEXE)
+
+$(DBGEXE):	$(DBGOBJS)
+	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^
+
+$(DBGDIR)/%.o:	src/%.cpp
+	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $@ $<
+
+#
 # Example rules
 #
-examples:	$(patsubst $(EXAMPLEDIR)/%.cpp,$(DBGDIR)/%,$(wildcard $(EXAMPLEDIR)/*.cpp))
+examples:	$(patsubst $(EXAMPLEDIR)/%.cpp,$(DBGDIR)/%,$(EXAMPLESRCS))
 
 $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $^
@@ -90,40 +109,37 @@ $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 #
 # Other rules
 #
-prep:
-	mkdir -p $(DBGDIR) $(RELDIR)
+
+# TODO JOEY There is probably a better way to define
+# the next three rules
+$(TARGET):
+	@mkdir -v $(TARGET)
+
+$(DBGDIR):	$(TARGET)
+	@mkdir -v $(DBGDIR)
+
+$(RELDIR):	$(TARGET)
+	@mkdir -v $(RELDIR)
 
 test:	debug examples
-	bash test/lexer.sh
-	$(DBGEXE) < test/kaleidoscope_input.txt
-
-remake:	realclean all
+	bash $(TEST)/lexer.sh
+	$(DBGEXE) < $(TEST)/kaleidoscope_input.txt
 
 clean:
-	@rm -v -f $(RELOBJS) $(DBGOBJS)
+	@rm -v -f $(RELDIR)/*.o $(DBGDIR)/*.o
 
-ifeq ($(UNAME),Darwin)
-remove-executables:
-	find $(DBGDIR) -type f -perm +111 -delete
-	find $(RELDIR) -type f -perm +111 -delete
-else
-remove-executables:
-	find $(DBGDIR) -executable -type f -delete 
-	find $(RELDIR) -executable -type f -delete 
-endif
+realclean:	clean
+	$(call remove-executables,$(DBGDIR))
+	$(call remove-executables,$(RELDIR))
+	$(call remove-if-exists,$(DBGDIR))
+	$(call remove-if-exists,$(RELDIR))
+	$(call remove-if-exists,$(TARGET))
 
-realclean:	clean remove-executables
-	@rm -v -f $(RELEXE) $(DBGEXE)
+remake:	realclean release
 
-fmt-helper:
+fmt:
+	command -v nixfmt >/dev/null 2>&1 && nixfmt --width=80 shell.nix
 	clang-format --style=llvm -i $(SRCS) \
 		$(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h)) \
-		$(wildcard $(EXAMPLEDIR)/*.cpp)
+		$(EXAMPLESRCS)
 	shfmt -s -w -i 2 -ci test/lexer.sh
-
-ifneq (shell command nixfmt --help,)
-fmt: fmt-helper
-	nixfmt --width=80 shell.nix
-else
-fmt: fmt-helper
-endif

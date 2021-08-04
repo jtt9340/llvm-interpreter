@@ -1,10 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include "ast.h"
-
-// The lexer returns tokens [0-255] if it is an unknown character, otherwise one
-// of these for known things.
+/// The lexer returns tokens [0-255] if it is an unknown character, otherwise
+/// one of these for known things.
 enum Token {
   /// EOF: We have reacted the end of the file
   tok_eof = -1,
@@ -105,4 +103,4 @@ const std::string &getIdentifierStr();
 /// @return the last read numeric literal
 double getNumVal();
 
-#endif
+#endif // LEXER_h

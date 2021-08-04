@@ -1,10 +1,8 @@
 #include <iostream> // std::cout, std::endl
 
-#include "../src/ast.h"
 #include "../src/lexer.h"
 #include "../src/parser.h" // ParseTopLevelExpr
-
-#define loop for (;;)
+#include "../src/util.h"
 
 int main(int argc, const char **argv) {
   SetupBinopPrecedences();
