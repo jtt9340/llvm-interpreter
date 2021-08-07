@@ -39,11 +39,13 @@ public:
   /// Return a helpful string representation of this PrototypeAST node
   /// useful for debugging.
   ///
+  /// @param depth the level of indentation to print this PrototypeAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "PrototypeAST(%1$s(%2$s, %3$s, ..., %n$s))"
   ///         where %1$s is the name of the function that this PrototypeAST
   ///         represents, and %2$s, %3$s, ..., %n$s are the names of the formal
   ///         parameters of this PrototypeAST
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 
   /// Is this a function prototype for a unary operator?
   ///

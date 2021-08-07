@@ -17,11 +17,12 @@
 using llvm::orc::KaleidoscopeJIT;
 
 /// "Showable@<address>"
-std::string Showable::toString() const {
+std::string Showable::toString(unsigned depth) const {
   // Default implementation is to just return the memory
   // address of this object as a string
-  std::ostringstream repr("Showable@", std::ios_base::ate);
-  repr << std::hex << this;
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "Showable@" << std::hex << this;
   return repr.str();
 }
 
@@ -165,6 +166,19 @@ void HandleTopLevelExpression() {
     // Skip token to handle errors.
     getNextToken();
   }
+}
+
+std::ostream &insert_indent(std::ostream &os, const unsigned n) {
+  for (unsigned i = 0; i < n; i++)
+    os << '\t';
+  return os;
+}
+
+/// Remove whitespace from beginning.
+std::string &strltrim(std::string &s) {
+  auto nonwhitespaceIndex = s.find_first_not_of(WHITESPACE_CHARS);
+  s.erase(0, nonwhitespaceIndex);
+  return s;
 }
 
 // TODO - make error reports more user friendly

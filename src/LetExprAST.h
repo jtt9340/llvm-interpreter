@@ -40,6 +40,8 @@ public:
   /// Return a helpful string representation of this LetExprAST node
   /// useful for debugging.
   ///
+  /// @param depth the level of indentation to print this LetExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "LetExprAST(
   ///		%1$s = %2$s,
   ///		%3$s = %4$s,
@@ -50,7 +52,7 @@ public:
   /// %$(i + 1)s, where i is an odd integer, is the string representation
   /// of the value of that variable, if given, and %s is the string
   /// representation of the body of this LetExprAST.
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // LETEXPRAST_H

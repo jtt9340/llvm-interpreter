@@ -15,8 +15,10 @@
 struct Showable {
   /// Return a string representation of this object.
   ///
+  /// @param depth the level of indentation to print this object at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string representation of this object useful for debugging
-  virtual std::string toString() const;
+  virtual std::string toString(const unsigned depth = 0) const;
 };
 
 // Forward-declare ExprAST and PrototypeAST: these classes are needed in
@@ -25,6 +27,9 @@ struct Showable {
 // causing a circular dependency.
 class ExprAST;
 class PrototypeAST;
+
+/// Sequence of characters that are considered whitespace.
+#define WHITESPACE_CHARS " \f\n\r\t\v"
 
 /// Set up the internal module for the interpreter and initialize all
 /// optimizations.
@@ -66,6 +71,20 @@ void HandleExtern();
 /// What to do when any other expression that is not a function definition or
 /// extern function declaration is encountered at the REPL.
 void HandleTopLevelExpression();
+
+/// Helper function for adding n tabs to the output stream os.
+///
+/// @param os the ostream to write to
+/// @param n the number of tab characters to write
+/// @returns the output stream written to
+std::ostream &insert_indent(std::ostream &os, const unsigned n);
+
+/// Helper function for trimming whitespace from the beginning of a string.
+///
+/// @param s the string to trim the whitespace off the beginning of
+/// @returns the given string with whitespace at the beginning removed.
+///          Note that this function mutates the given string as well as returning it
+std::string &strltrim(std::string &s);
 
 /// These are basic helper functions for basic error handling.
 std::unique_ptr<ExprAST> LogError(const char *Str);

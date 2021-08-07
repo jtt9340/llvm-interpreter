@@ -72,9 +72,18 @@ llvm::Value *IfExprAST::codegen() {
 }
 
 /// "IfExprAST(cond ? ifTrue : ifFalse)"
-std::string IfExprAST::toString() const {
-  std::ostringstream repr("IfExptAST(", std::ios_base::ate);
-  repr << Cond->toString() << "\n\t? " << Then->toString()
-       << "\n\t: " << Else->toString() << "\n)";
+std::string IfExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  auto ThenS = Then->toString(depth + 1),
+       ElseS = Else->toString(depth + 1);
+
+  insert_indent(repr, depth);
+  repr << "IfExprAST(" << Cond->toString() << std::endl;
+  insert_indent(repr, depth + 1);
+  repr << "? " << strltrim(ThenS) << std::endl;
+  insert_indent(repr, depth + 1);
+  repr << ": " << strltrim(ElseS) << std::endl;
+  insert_indent(repr, depth);
+  repr << ')';
   return repr.str();
 }

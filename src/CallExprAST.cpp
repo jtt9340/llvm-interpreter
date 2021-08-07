@@ -39,9 +39,10 @@ llvm::Value *CallExprAST::codegen() {
 }
 
 /// "CallExprAST(function(arg0, arg1, ..., argn))"
-std::string CallExprAST::toString() const {
-  std::ostringstream repr("CallExprAST(", std::ios_base::ate);
-  repr << Callee << '(';
+std::string CallExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "CallExprAST(" << Callee << '(';
   for (auto it = Args.begin(); it != Args.end(); it++) {
     repr << (*it)->toString();
     if (it != Args.end() - 1)

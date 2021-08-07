@@ -27,13 +27,15 @@ public:
   /// Return a helpful string representation of this FunctionAST node useful
   /// for debugging.
   ///
+  /// @param depth the level of indentation to print this FunctionAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "FunctionAST(
   ///         	%1$s,
   ///         	%2$s
   ///         )", where %1$s is the string representation of this FunctionAST's
   ///         prototype, and %2$s is the string representation of this
   ///         FunctionAST's body
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // FUNCTIONAST_H

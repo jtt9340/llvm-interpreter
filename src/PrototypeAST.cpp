@@ -44,9 +44,10 @@ llvm::Function *PrototypeAST::codegen() {
 }
 
 /// "PrototypeAST(function(arg0, arg1, ..., argn))"
-std::string PrototypeAST::toString() const {
-  std::ostringstream repr("PrototypeAST(", std::ios_base::ate);
-  repr << Name << '(';
+std::string PrototypeAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "PrototypeAST(" << Name << '(';
   for (auto it = Args.begin(); it != Args.end(); it++) {
     repr << *it;
     if (it != Args.end() - 1)

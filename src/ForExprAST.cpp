@@ -107,11 +107,14 @@ llvm::Value *ForExprAST::codegen() {
 }
 
 /// "ForExprAST(var = init, cond, step, body)"
-std::string ForExprAST::toString() const {
-  std::ostringstream repr("ForExprAST(", std::ios_base::ate);
-  repr << VarName << " = " << Start->toString() << ", " << End->toString();
+std::string ForExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "ForExprAST(" << VarName << " = " << Start->toString() << ", " << End->toString();
   if (Step)
     repr << ", " << Step->toString();
-  repr << ',' << "\n\t" << Body->toString() << "\n)";
+  repr << ',' << std::endl << Body->toString(depth + 1) << std::endl;
+  insert_indent(repr, depth);
+  repr << ')';
   return repr.str();
 }

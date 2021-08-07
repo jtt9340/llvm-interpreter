@@ -95,6 +95,9 @@ llvm::Value *BinaryExprAST::codegen() {
 }
 
 /// "lhs op rhs"
-std::string BinaryExprAST::toString() const {
-  return LHS->toString() + ' ' + Op + ' ' + RHS->toString();
+std::string BinaryExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << LHS->toString() << ' ' << Op << ' ' << RHS->toString();
+  return repr.str();
 }

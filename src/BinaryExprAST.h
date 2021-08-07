@@ -30,12 +30,14 @@ public:
   /// Return a helpful string representation of this BinaryExprAST, useful
   /// for debugging.
   ///
+  /// @param depth the level of indentation to print this BinaryExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "%1$s %c %2$s", where %1$s is the string
   /// representation of the left side of this BinaryExprAST, %2$s is the string
   /// representation of the right side of this BinaryExprAST, and %c is
   /// the binary operator conjoining the left- and right-hand sides of this
   /// BinaryExprAST
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // BINARYEXPRAST_H

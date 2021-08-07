@@ -29,11 +29,13 @@ public:
   /// Return a helpful string representation of this CallExprAST node
   /// useful for debugging.
   ///
+  /// @param depth the level of indentation to print this CallExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "CallExprAST(%1$s(%2$s, %3$s, ..., %n$s))"
   ///         where %1$s is the name of the function being called,
   ///         and %2$s, %3$s, ..., %n$s are the string representations of the
   ///         arguments being passed to this function call
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // CALLEXPRAST_H

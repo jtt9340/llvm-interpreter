@@ -37,6 +37,8 @@ public:
   /// Return a helpful string representation of this IfExprAST node
   /// useful for debugging.
   ///
+  /// @param depth the level of indentation to print this IfExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "IfExprAST(%1$s
   ///         	? %2$s
   ///         	: %3$s
@@ -44,7 +46,7 @@ public:
   ///         part of this IfExprAST, %2$s is the string representation of the
   ///         then-clause of this IfExprAST, and %$3s is the string
   ///         representation of the else-clause of this IfExprAST
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // IFEXPRAST_H

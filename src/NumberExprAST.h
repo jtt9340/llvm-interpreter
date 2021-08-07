@@ -23,9 +23,11 @@ public:
   /// Return a helpful string representation of this NumberExprAST useful
   /// for debugging.
   ///
+  /// @param depth the level of indentation to print this NumberExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "NumberExprAST(%f)", where %f is the value
   ///         that this NumberExprAST wraps
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // NUMBEREXPRAST_H

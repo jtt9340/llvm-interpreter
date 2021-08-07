@@ -14,8 +14,9 @@ llvm::Value *NumberExprAST::codegen() {
 }
 
 /// "NumberExprAST(%f)"
-std::string NumberExprAST::toString() const {
-  std::ostringstream repr("NumberExprAST(", std::ios_base::ate);
-  repr << Val << ')';
+std::string NumberExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "NumberExprAST(" << Val << ')';
   return repr.str();
 }

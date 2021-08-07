@@ -22,9 +22,11 @@ struct VariableExprAST : public ExprAST {
   /// Return a helpful string representation of this VariableExprAST useful
   /// for debugging.
   ///
+  /// @param depth the level of indentation to print this VariableExprAST at,
+  ///              useful for pretty-printing (may be ignored by implementation)
   /// @return a string of the form "VariableExprAST(%s)", where %s is the name
   ///         of the variable that this VariableExprAST wraps
-  std::string toString() const override;
+  std::string toString(const unsigned depth = 0) const override;
 };
 
 #endif // VARIABLEEXPRAST_H

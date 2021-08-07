@@ -65,18 +65,24 @@ llvm::Value *LetExprAST::codegen() {
 }
 
 /// "LetExprAST(var0 = val0, var1 = val1, ..., varn = valn; body)"
-std::string LetExprAST::toString() const {
-  std::ostringstream repr("LetExprAST(\n", std::ios_base::ate);
+std::string LetExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << "LetExprAST(" << std::endl;
+
   for (auto it = VarNames.begin(); it != VarNames.end(); it++) {
     const auto VarName = it->first;
     const auto *InitialExpr = it->second.get();
 
-    repr << '\t' << VarName << " = "
+    insert_indent(repr, depth + 1);
+    repr << VarName << " = "
          << (InitialExpr ? InitialExpr->toString()
                          : NumberExprAST(0.0).toString())
-         << (it == VarNames.end() - 1 ? ';' : ',') << '\n';
+         << (it == VarNames.end() - 1 ? ';' : ',') << std::endl;
   }
 
-  repr << '\t' << Body->toString() << "\n)";
+  repr << Body->toString(depth + 1) << std::endl;
+  insert_indent(repr, depth);
+  repr << ')';
   return repr.str();
 }

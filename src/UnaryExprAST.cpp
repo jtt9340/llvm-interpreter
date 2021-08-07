@@ -1,3 +1,5 @@
+#include <sstream> // std::ostringstream
+
 #include "UnaryExprAST.h"
 
 using std::size_t;
@@ -25,4 +27,9 @@ llvm::Value *UnaryExprAST::codegen() {
 }
 
 /// "op rhs"
-std::string UnaryExprAST::toString() const { return Op + Operand->toString(); }
+std::string UnaryExprAST::toString(const unsigned depth) const {
+  std::ostringstream repr;
+  insert_indent(repr, depth);
+  repr << Op << Operand->toString();
+  return repr.str();
+}
