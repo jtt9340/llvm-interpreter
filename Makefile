@@ -5,18 +5,28 @@
 #
 UNAME := $(shell uname)
 
+# Retrieve all executable files from the given directory
 ifeq ($(UNAME),Darwin)
-remove-executables =                           \
-	if [ -d $(1) ]; then                       \
-		find $(1) -type f -perm +111 -delete;  \
+find-executables =                    \
+	if [ -d $(1) ]; then              \
+		find $(1) -type f -perm +111; \
 	fi
 else
-remove-executables =                           \
-	if [ -d $(1) ]; then                       \
-		find $(1) -executable -type f -delete; \
+find-executables =                     \
+	if [ -d $(1) ]; then               \
+		find $(1) -executable -type f; \
 	fi
 endif
 
+# Remove all executable files (except *.sh files) from the given directory
+remove-executables =                                 \
+	for exe in $$($(call find-executables,$(1))); do \
+		if ! echo $$exe | grep -q '.sh$$'; then      \
+			rm -f -v "$$exe";                        \
+		fi;                                          \
+	done
+
+# Remove the given directory if it exists
 remove-if-exists =       \
 	if [ -d $(1) ]; then \
 		rmdir $(1);      \
@@ -48,17 +58,19 @@ EXE =	kaleidoscope
 #
 # Debug build settings
 #
-DBGDIR =	$(TARGET)/debug
+DBGDIR =	$(TARGETDIR)/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
 override DBGCFLAGS +=	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 # Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
-# DBGFLAGS += -fno-optimize-sibling-calls
+ifdef NOTAILCALL
+DBGCFLAGS += -fno-optimize-sibling-calls
+endif
 
 #
 # Release build settings
 #
-RELDIR =	$(TARGET)/release
+RELDIR =	$(TARGETDIR)/release
 RELEXE =	$(RELDIR)/$(EXE)
 RELOBJS =	$(addprefix $(RELDIR)/, $(OBJS))
 override RELCFLAGS +=	-O2 -DNDEBUG
@@ -73,7 +85,9 @@ EXAMPLEOBJS =	$(filter-out $(DBGDIR)/main.o,$(DBGOBJS))
 #
 # Test build settings
 #
-TEST =	test
+TESTDIR =	test
+TESTSRCS =	$(wildcard $(TESTDIR)/*.cpp)
+TESTOBJS =	$(EXAMPLEOBJS)
 
 .PHONY:	clean realclean debug release remake test examples fmt
 
@@ -108,39 +122,63 @@ $(DBGDIR)/%:	$(EXAMPLEDIR)/%.cpp $(EXAMPLEOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $^
 
 #
+# Test rules
+#
+test:	debug $(DBGDIR)/lexer $(patsubst $(TESTDIR)/%.cpp,$(TESTDIR)/%,$(TESTSRCS))
+	@for unittest in $$($(call find-executables,$(TESTDIR))); do \
+		echo "$$unittest" && "$$unittest";                       \
+	done
+	$(DBGEXE) < $(TESTDIR)/kaleidoscope_input.txt
+
+$(TESTDIR)/%:	$(TESTDIR)/%.cpp $(TESTOBJS)
+	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $^
+
+#
 # Other rules
 #
 
 # TODO JOEY There is probably a better way to define
 # the next three rules
-$(TARGET):
-	@mkdir -v $(TARGET)
+$(TARGETDIR):
+	@mkdir -v $(TARGETDIR)
 
-$(DBGDIR):	$(TARGET)
+$(DBGDIR):	$(TARGETDIR)
 	@mkdir -v $(DBGDIR)
 
-$(RELDIR):	$(TARGET)
+$(RELDIR):	$(TARGETDIR)
 	@mkdir -v $(RELDIR)
-
-test:	debug examples
-	bash $(TEST)/lexer.sh
-	$(DBGEXE) < $(TEST)/kaleidoscope_input.txt
 
 clean:
 	@rm -v -f $(RELDIR)/*.o $(DBGDIR)/*.o
 
 realclean:	clean
-	$(call remove-executables,$(DBGDIR))
-	$(call remove-executables,$(RELDIR))
-	$(call remove-if-exists,$(DBGDIR))
-	$(call remove-if-exists,$(RELDIR))
-	$(call remove-if-exists,$(TARGET))
+# TODO JOEY Can this be a loop?
+	@$(call remove-executables,$(DBGDIR))
+	@$(call remove-executables,$(RELDIR))
+	@$(call remove-executables,$(TESTDIR))
+ifeq ($(UNAME),Darwin)
+	@find "$(CURDIR)" \( -type f -name .DS_Store -o -type d -name __MACOSX \) -print0 | \
+		xargs -0 rm -r -v -f
+	@if [ -d $(DBGDIR) ]; then                                   \
+		find $(DBGDIR) -name *.dSYM -print0 | xargs -0 rm -r -v; \
+	fi	
+	@if [ -d $(RELDIR) ]; then                                   \
+		find $(RELDIR) -name *.dSYM -print0 | xargs -0 rm -r -v; \
+	fi	
+	@find $(TESTDIR) -name *.dSYM -print0 | xargs -0 rm -r -v 
+endif
+	@$(call remove-if-exists,$(DBGDIR))
+	@$(call remove-if-exists,$(RELDIR))
+	@$(call remove-if-exists,$(TARGETDIR))
 
 remake:	realclean release
 
 fmt:
-	command -v nixfmt >/dev/null 2>&1 && nixfmt --width=80 shell.nix
+	@if command -v nixfmt >/dev/null 2>&1; then \
+		echo nixfmt --width=80 shell.nix; \
+		nixfmt --width=80 shell.nix; \
+	fi
 	clang-format --style=llvm -i $(SRCS) \
 		$(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h)) \
-		$(EXAMPLESRCS)
+		$(EXAMPLESRCS) $(TESTSRCS)
 	shfmt -s -w -i 2 -ci test/lexer.sh

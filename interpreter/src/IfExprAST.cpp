@@ -74,11 +74,11 @@ llvm::Value *IfExprAST::codegen() {
 /// "IfExprAST(cond ? ifTrue : ifFalse)"
 std::string IfExprAST::toString(const unsigned depth) const {
   std::ostringstream repr;
-  auto ThenS = Then->toString(depth + 1),
+  auto CondS = Cond->toString(depth + 1), ThenS = Then->toString(depth + 1),
        ElseS = Else->toString(depth + 1);
 
   insert_indent(repr, depth);
-  repr << "IfExprAST(" << Cond->toString() << std::endl;
+  repr << "IfExprAST(" << strltrim(CondS) << std::endl;
   insert_indent(repr, depth + 1);
   repr << "? " << strltrim(ThenS) << std::endl;
   insert_indent(repr, depth + 1);

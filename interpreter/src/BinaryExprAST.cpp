@@ -97,7 +97,9 @@ llvm::Value *BinaryExprAST::codegen() {
 /// "lhs op rhs"
 std::string BinaryExprAST::toString(const unsigned depth) const {
   std::ostringstream repr;
+  auto LHSS = LHS->toString(depth), RHSS = RHS->toString(depth);
+
   insert_indent(repr, depth);
-  repr << LHS->toString() << ' ' << Op << ' ' << RHS->toString();
+  repr << strltrim(LHSS) << ' ' << Op << ' ' << strltrim(RHSS);
   return repr.str();
 }

@@ -74,10 +74,11 @@ std::string LetExprAST::toString(const unsigned depth) const {
     const auto VarName = it->first;
     const auto *InitialExpr = it->second.get();
 
+    auto InitialExprS = InitialExpr ? InitialExpr->toString(depth + 1)
+                                    : NumberExprAST(0.0).toString();
+
     insert_indent(repr, depth + 1);
-    repr << VarName << " = "
-         << (InitialExpr ? InitialExpr->toString()
-                         : NumberExprAST(0.0).toString())
+    repr << VarName << " = " << strltrim(InitialExprS)
          << (it == VarNames.end() - 1 ? ';' : ',') << std::endl;
   }
 

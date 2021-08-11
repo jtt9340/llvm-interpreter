@@ -29,7 +29,8 @@ llvm::Value *UnaryExprAST::codegen() {
 /// "op rhs"
 std::string UnaryExprAST::toString(const unsigned depth) const {
   std::ostringstream repr;
+  auto OperandS = Operand->toString(depth);
   insert_indent(repr, depth);
-  repr << Op << Operand->toString();
+  repr << Op << strltrim(OperandS);
   return repr.str();
 }

@@ -1,9 +1,13 @@
 # Build outputs
 target/
+test/*
 *.o
 *.so
 *.dylib
 *.dSYM
+
+# Do not ignore source files in the test directory
+!test/*.cpp
 
 # Used for creating test programs and other one-off programs
 scratch/

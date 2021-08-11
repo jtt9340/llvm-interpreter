@@ -44,7 +44,8 @@ std::string CallExprAST::toString(const unsigned depth) const {
   insert_indent(repr, depth);
   repr << "CallExprAST(" << Callee << '(';
   for (auto it = Args.begin(); it != Args.end(); it++) {
-    repr << (*it)->toString();
+    auto argS = (*it)->toString(depth);
+    repr << strltrim(argS);
     if (it != Args.end() - 1)
       repr << ", ";
   }

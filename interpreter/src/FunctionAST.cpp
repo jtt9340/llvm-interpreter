@@ -88,7 +88,9 @@ llvm::Function *FunctionAST::codegen() {
 std::string FunctionAST::toString(const unsigned depth) const {
   std::ostringstream repr;
   insert_indent(repr, depth);
-  repr << "FunctionAST(" << std::endl << Proto->toString(depth + 1) << ',' << std::endl << Body->toString(depth + 1) << std::endl;
+  repr << "FunctionAST(" << std::endl
+       << Proto->toString(depth + 1) << ',' << std::endl
+       << Body->toString(depth + 1) << std::endl;
   insert_indent(repr, depth);
   repr << ')';
   return repr.str();
