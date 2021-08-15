@@ -27,8 +27,8 @@ remove-if-exists =       \
 #
 CC =	clang
 CXX =	clang++
-CFLAGS = -Wall -Wextra -pedantic -pipe 
-CXXFLAGS = $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
+override CFLAGS += -Wall -Wextra -pedantic -pipe 
+override CXXFLAGS += $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
 	# Use the libc++ bundled with Homebrew
@@ -50,7 +50,7 @@ EXE =	kaleidoscope
 DBGDIR =	$(TARGET)/debug
 DBGEXE =	$(DBGDIR)/$(EXE)
 DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
-DBGCFLAGS =	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
+override DBGCFLAGS +=	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 # Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
 # DBGFLAGS += -fno-optimize-sibling-calls
 
@@ -60,7 +60,7 @@ DBGCFLAGS =	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 RELDIR =	$(TARGET)/release
 RELEXE =	$(RELDIR)/$(EXE)
 RELOBJS =	$(addprefix $(RELDIR)/, $(OBJS))
-RELCFLAGS =	-O2 -DNDEBUG
+override RELCFLAGS +=	-O2 -DNDEBUG
 
 #
 # Example build settings
