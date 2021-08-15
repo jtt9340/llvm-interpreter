@@ -64,7 +64,7 @@ DBGOBJS =	$(addprefix $(DBGDIR)/, $(OBJS))
 override DBGCFLAGS +=	-v -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
 # Add this flag to disable tail call elimiation (helps in getting perfect stack traces)
 ifdef NOTAILCALL
-DBGCFLAGS += -fno-optimize-sibling-calls
+override DBGCFLAGS += -fno-optimize-sibling-calls
 endif
 
 #
