@@ -18,9 +18,6 @@
 // This holds the precedence for each binary operator that is defined
 static std::unordered_map<char, int> BinopPrecedence;
 
-/// Is c an ASCII character, assuming an ASCII or UTF-8 encoding?
-static inline bool isascii(const char c) { return c > 0 || c < 128; }
-
 /// Update the internal binary operator precedence table with the appropriate
 /// values.
 void SetupBinopPrecedences() {
