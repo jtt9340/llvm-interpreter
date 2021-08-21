@@ -38,6 +38,10 @@ int InstallBinopPrecedence(const char Op, const int Precedence) {
   return BinopPrecedence[Op] = Precedence;
 }
 
+bool UninstallBinopPrecedence(const char Op) {
+  return BinopPrecedence.erase(Op);
+}
+
 /// numberexpr ::= number
 std::unique_ptr<ExprAST> ParseNumberExpr() {
   auto Result = std::make_unique<NumberExprAST>(getNumVal());

@@ -21,6 +21,13 @@ void SetupBinopPrecedences();
 /// @return the precedence the binary operator was installed with
 int InstallBinopPrecedence(const char Op, const int Precedence);
 
+/// Remove the binary operator 'Op' from the interal binary operator precedence
+/// table.
+///
+/// @param Op the binary operator to remove
+/// @return if the given binary operator existed in the first place
+bool UninstallBinopPrecedence(const char Op);
+
 /// Transform the floating point number tokenized by gettok() into an AST node
 /// that represents a numerical expression.
 ///

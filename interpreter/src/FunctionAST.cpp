@@ -81,6 +81,10 @@ llvm::Function *FunctionAST::codegen() {
   // to redefine it. Otherwise, the namespace would be polluted with
   // a faulty function.
   Function->eraseFromParent();
+
+  if (P.isBinaryOp())
+    UninstallBinopPrecedence(P.getOperatorName());
+
   return nullptr;
 }
 
