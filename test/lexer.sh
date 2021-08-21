@@ -17,9 +17,12 @@ identifier_regex="identifier $digit_regex"
 unrecognized_token_regex='unrecognized token .+ \([[:digit:]]+\)'
 
 if [[ -n $1 ]]; then
-  exe=($1)
+  exe=("$1")
 else
-  exe=($(find . -type d \( -path examples -o -path '*.dSYM' \) -prune -false -o -name $exe_name))
+  exe=()
+  while IFS='' read -r exe_file; do
+    exe+=("$exe_file")
+  done < <(find . -type d \( -path examples -o -path '*.dSYM' \) -prune -false -o -name $exe_name)
 fi
 
 case ${#exe[@]} in
@@ -30,13 +33,14 @@ case ${#exe[@]} in
     ;;
   1)
     # Flatten the array into a single string
+    # shellcheck disable=SC2178
     exe=${exe[0]}
     ;;
   *)
     # Recursively call this script with each executable in the exe array
     for x in ${exe[*]}; do
       # Recursively call this script in parallel
-      $0 $x &
+      $0 "$x" &
     done
     wait # Wait for the recursive calls of this script to finish
     exit $?
@@ -48,17 +52,21 @@ function do_test() {
   local input=$1
   local expr=$2
 
-  echo echo $input \| $exe
+  # At this point $exe is not an array since it is flattened above,
+  # and execution will only reach this point if $exe is not an array.
+  # shellcheck disable=SC2128
+  echo echo "$input" \| "$exe"
   # We have to temporarily disable exit on first error (-e)
   # Because $exe might exit with a non-zero return status which
   # causes this script to silently fail
   set +e
-  output=$(printf -- "$input\n" | $exe 2>&1)
+  # shellcheck disable=SC2128
+  output=$(printf -- "%s\n" "$input" | $exe 2>&1)
   set -e
   if [[ ! $output =~ $expr ]]; then
-    echo Unexpected output for input $input >&2
-    echo Expected output to match the regular expression \"$expr\" >&2
-    echo '	'But instead output was: $output >&2
+    echo Unexpected output for input "$input" >&2
+    echo Expected output to match the regular expression \""$expr"\" >&2
+    echo "	But instead output was: $output" >&2
     exit 1
   fi
 }
@@ -86,7 +94,7 @@ keywords=(
   unary
   'let'
 )
-for keyword in ${keywords[@]}; do
+for keyword in "${keywords[@]}"; do
   do_test "$keyword" "$keyword $digit_regex"
 done
 
@@ -100,4 +108,7 @@ for input in . 1hello 127.0.0.1 .PHONY; do
 done
 
 wait # Wait for pending unit tests to finish
+# At this point $exe is not an array since it is flattened above,
+# and execution will only reach this point if $exe is not an array.
+# shellcheck disable=SC2128
 echo "Passed! ($exe)"
