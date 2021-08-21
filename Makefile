@@ -128,7 +128,7 @@ test:	debug $(DBGDIR)/lexer $(patsubst $(TESTDIR)/%.cpp,$(TESTDIR)/%,$(TESTSRCS)
 	@for unittest in $$($(call find-executables,$(TESTDIR))); do \
 		echo "$$unittest" && "$$unittest";                       \
 	done
-	$(DBGEXE) < $(TESTDIR)/kaleidoscope_input.txt
+	ASAN_OPTIONS=detect_container_overflow=0 $(DBGEXE) < $(TESTDIR)/kaleidoscope_input.txt
 
 $(TESTDIR)/%:	$(TESTDIR)/%.cpp $(TESTOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $@ $^
