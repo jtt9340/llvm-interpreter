@@ -27,7 +27,7 @@ remove-if-exists =       \
 #
 CC =	clang
 CXX =	clang++
-override CFLAGS += -Wall -Wextra -pedantic -pipe 
+override CFLAGS += -Wall -Wextra -pedantic -pipe "-I$(CURDIR)/interpreter/include"
 override CXXFLAGS += $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
@@ -39,9 +39,10 @@ endif
 #
 # Project files
 #
-SRCS =	$(wildcard src/*.cpp)
-OBJS =	$(SRCS:src/%.cpp=%.o)
-TARGET =	target
+SRCSROOT =	interpreter/src
+SRCS =	$(wildcard $(SRCSROOT)/*.cpp)
+OBJS =	$(SRCS:$(SRCSROOT)/%.cpp=%.o)
+TARGETDIR =	target
 EXE =	kaleidoscope
 
 #
@@ -84,7 +85,7 @@ release:	$(RELDIR) $(RELEXE)
 $(RELEXE):	$(RELOBJS)
 	$(CXX) $(CXXFLAGS) $(RELCFLAGS) -o $(RELEXE) $^
 
-$(RELDIR)/%.o:	src/%.cpp
+$(RELDIR)/%.o:	$(SRCSROOT)/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(RELCFLAGS) -o $@ $<
 
 #
@@ -95,7 +96,7 @@ debug:	$(DBGDIR) $(DBGEXE)
 $(DBGEXE):	$(DBGOBJS)
 	$(CXX) $(CXXFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^
 
-$(DBGDIR)/%.o:	src/%.cpp
+$(DBGDIR)/%.o:	$(SRCSROOT)/%.cpp
 	$(CXX) -c $(CXXFLAGS) $(DBGCFLAGS) -o $@ $<
 
 #

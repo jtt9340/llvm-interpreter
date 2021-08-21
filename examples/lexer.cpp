@@ -1,6 +1,6 @@
 #include <iostream> // std::cout, std::endl
 
-#include "../src/lexer.h" // getNextToken, tokenToString
+#include "lexer.h" // getNextToken, tokenToString
 
 int main() {
   const int tok = getNextToken();

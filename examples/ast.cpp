@@ -1,8 +1,8 @@
 #include <iostream> // std::cout, std::endl
 
-#include "../src/lexer.h"
-#include "../src/parser.h" // ParseTopLevelExpr
-#include "../src/util.h"
+#include "lexer.h"
+#include "parser.h" // ParseTopLevelExpr
+#include "util.h"
 
 int main(int argc, const char **argv) {
   SetupBinopPrecedences();
