@@ -1,7 +1,10 @@
 #include <cstdio>   // std::fputc, std::printf
 #include <iostream> // std::cerr, std::endl
 
-#include <llvm/Support/TargetSelect.h> // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser
+#include <llvm/Support/FileSystem.h>     // llvm::sys::fs::OF_None
+#include <llvm/Support/Host.h>           // llvm::sys::getDefaultTargetTriple
+#include <llvm/Support/TargetRegistry.h> // llvm::TargetRegistry
+#include <llvm/Support/TargetSelect.h>   // llvm::InitializeNativeTarget, llvm::InitializeNativeTargetAsmPrinter, llvm::InitializeNativeTargetAsmParser
 
 #include "KaleidoscopeJIT.h" // JIT
 #include "lexer.h"
@@ -68,10 +71,11 @@ static void MainLoop(const char *ProgName) {
 }
 
 int main(int argc, const char **argv) {
+#if 0
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
-
+#endif
   SetupBinopPrecedences();
   InitializeModuleAndPassManager();
 
@@ -81,6 +85,53 @@ int main(int argc, const char **argv) {
 
   // Run the REPL now.
   MainLoop(argv[0]);
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmPrinters();
+
+  auto TargetTriple = llvm::sys::getDefaultTargetTriple();
+
+  std::string Error;
+  auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
+
+  if (!Target) {
+	  llvm::errs() << Error;
+	  return 1;
+  }
+
+  auto CPU = "generic";
+  auto Features = "";
+
+  llvm::TargetOptions opt;
+  auto RM = llvm::Optional<llvm::Reloc::Model>();
+  auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+
+  borrowModule().setDataLayout(TargetMachine->createDataLayout());
+  borrowModule().setTargetTriple(TargetTriple);
+
+  auto Filename = "session.o";
+  std::error_code EC;
+  llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::OF_None);
+
+  if (EC) {
+	  llvm::errs() << "Could not open " << Filename << ": " << EC.message();
+	  return 1;
+  }
+
+  llvm::legacy::PassManager pass;
+  auto FileType = llvm::CGFT_ObjectFile;
+
+  if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+	  llvm::errs() << "Cannot emit a file of this type";
+	  return 1;
+  }
+
+  pass.run(borrowModule());
+  dest.flush();
+  llvm::outs() << "Wrote " << Filename;
 
   return 0;
 }

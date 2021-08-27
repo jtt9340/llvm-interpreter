@@ -38,7 +38,7 @@ remove-if-exists =       \
 CC =	clang
 CXX =	clang++
 override CFLAGS += -Wall -Wextra -pedantic -pipe "-I$(CURDIR)/interpreter/include"
-override CXXFLAGS += $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native)
+override CXXFLAGS += $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs all)
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
 	# Use the libc++ bundled with Homebrew

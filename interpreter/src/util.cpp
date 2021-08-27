@@ -29,6 +29,7 @@ std::string Showable::toString(unsigned depth) const {
 void InitializeModuleAndPassManager() {
   // Open a new module.
   newModule("Kaleidoscope");
+#if 0
   borrowModule().setDataLayout(
       KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
@@ -57,6 +58,7 @@ void InitializeModuleAndPassManager() {
   FunctionPassManager.add(llvm::createCFGSimplificationPass());
   // Initialize all of the above passes.
   FunctionPassManager.doInitialization();
+#endif
 }
 
 /// Get or code generate a function in the current module with the given name,
@@ -101,8 +103,10 @@ void HandleDefinition() {
       std::cerr << "Generate LLVM IR for function definition:" << std::endl;
       ir->print(llvm::errs());
       std::cerr << std::endl;
+#if 0
       KaleidoscopeJIT::getInstance()->addModule(takeModule());
       InitializeModuleAndPassManager();
+#endif
     }
   } else {
     // Skip token to handle errors.
@@ -134,6 +138,7 @@ void HandleTopLevelExpression() {
   const auto expr = ParseTopLevelExpr();
   if (expr) {
     const auto *ir = expr->codegen();
+#if 0
     if (ir) {
       // Just-in-time compile the generated LLVM IR
       // We need to keep a handle to it so that it can be freed later
@@ -162,6 +167,7 @@ void HandleTopLevelExpression() {
       // Delete the module created for the anonymous expression
       KaleidoscopeJIT::getInstance()->removeModule(H);
     }
+#endif
   } else {
     // Skip token to handle errors.
     getNextToken();
