@@ -33,7 +33,7 @@ std::unique_ptr<llvm::Module> takeModule();
 
 std::unordered_map<std::string, llvm::AllocaInst *> &getNamedValues();
 
-llvm::legacy::FunctionPassManager &getFunctionPassManager();
+llvm::legacy::FunctionPassManager *getFunctionPassManager();
 void resetFunctionPassManager();
 
 std::unordered_map<std::string, std::unique_ptr<PrototypeAST>> &

@@ -26,39 +26,42 @@ std::string Showable::toString(unsigned depth) const {
   return repr.str();
 }
 
-void InitializeModuleAndPassManager() {
+void AddPasses(llvm::legacy::PassManagerBase *pass) {
+  // Turn alloca instructions into registers. (mem2reg)
+  pass->add(llvm::createPromoteMemoryToRegisterPass());
+  // Add an optimization that can combine obvious duplicate expressions, e->g.
+  // (1+2+x)*(x+2+1) becomes (x+3)*(x+3)
+  pass->add(llvm::createInstructionCombiningPass());
+  // Add an optimization to reorder expressions taking advantage of the
+  // commutative and associative properties, e->g. 4 + (x + 5) becomes x + (4 +
+  // 5)
+  pass->add(llvm::createReassociatePass());
+  // Remove redundant expressions
+  pass->add(llvm::createGVNPass());
+  // CFG -> Control Flow Graph simplification, i->e. removing dead code, merging
+  // basic blocks, etc->
+  pass->add(llvm::createCFGSimplificationPass());
+}
+
+void InitializeModuleAndPassManager(bool native) {
   // Open a new module.
   newModule("Kaleidoscope");
-#if 0
-  borrowModule().setDataLayout(
-      KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
-  // Create a new pass manager attached to it. We are using a function pass
-  // manager, which passes over code at the function level, looking for
-  // optimizations.
-  resetFunctionPassManager();
+  if (native) {
+    borrowModule().setDataLayout(
+        KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
-  // Isn't it crazy that all of these optimizations are built into LLVM and it's
-  // just a matter of "ooh pick this optimization"?
-  auto &FunctionPassManager = getFunctionPassManager();
+    // Create a new pass manager attached to it. We are using a function pass
+    // manager, which passes over code at the function level, looking for
+    // optimizations.
+    resetFunctionPassManager();
 
-  // Turn alloca instructions into registers. (mem2reg)
-  FunctionPassManager.add(llvm::createPromoteMemoryToRegisterPass());
-  // Add an optimization that can combine obvious duplicate expressions, e.g.
-  // (1+2+x)*(x+2+1) becomes (x+3)*(x+3)
-  FunctionPassManager.add(llvm::createInstructionCombiningPass());
-  // Add an optimization to reorder expressions taking advantage of the
-  // commutative and associative properties, e.g. 4 + (x + 5) becomes x + (4 +
-  // 5)
-  FunctionPassManager.add(llvm::createReassociatePass());
-  // Remove redundant expressions
-  FunctionPassManager.add(llvm::createGVNPass());
-  // CFG -> Control Flow Graph simplification, i.e. removing dead code, merging
-  // basic blocks, etc.
-  FunctionPassManager.add(llvm::createCFGSimplificationPass());
-  // Initialize all of the above passes.
-  FunctionPassManager.doInitialization();
-#endif
+    auto FunctionPassManager = getFunctionPassManager();
+    AddPasses(FunctionPassManager);
+
+    // Initialize all of the above passes.
+    FunctionPassManager->doInitialization();
+  }
 }
 
 /// Get or code generate a function in the current module with the given name,
@@ -95,7 +98,7 @@ llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *Function,
 }
 
 /// What to do when a function definition is encountered at the REPL.
-void HandleDefinition() {
+void HandleDefinition(bool native) {
   const auto defn = ParseDefinition();
   if (defn) {
     const auto *ir = defn->codegen();
@@ -103,10 +106,10 @@ void HandleDefinition() {
       std::cerr << "Generate LLVM IR for function definition:" << std::endl;
       ir->print(llvm::errs());
       std::cerr << std::endl;
-#if 0
-      KaleidoscopeJIT::getInstance()->addModule(takeModule());
-      InitializeModuleAndPassManager();
-#endif
+      if (native) {
+        KaleidoscopeJIT::getInstance()->addModule(takeModule());
+        InitializeModuleAndPassManager(native);
+      }
     }
   } else {
     // Skip token to handle errors.
@@ -133,17 +136,16 @@ void HandleExtern() {
 
 /// What to do when any other expression that is not a function definition or
 /// extern function declaration is encountered at the REPL.
-void HandleTopLevelExpression() {
+void HandleTopLevelExpression(bool native) {
   // Evaluate a top-level expression in an anonymous function.
   const auto expr = ParseTopLevelExpr();
   if (expr) {
     const auto *ir = expr->codegen();
-#if 0
-    if (ir) {
+    if (native && ir) {
       // Just-in-time compile the generated LLVM IR
       // We need to keep a handle to it so that it can be freed later
       auto H = KaleidoscopeJIT::getInstance()->addModule(takeModule());
-      InitializeModuleAndPassManager();
+      InitializeModuleAndPassManager(native);
 
       // Search the JIT for the __anon_expr symbol
       auto ExprSymbol =
@@ -167,7 +169,6 @@ void HandleTopLevelExpression() {
       // Delete the module created for the anonymous expression
       KaleidoscopeJIT::getInstance()->removeModule(H);
     }
-#endif
   } else {
     // Skip token to handle errors.
     getNextToken();

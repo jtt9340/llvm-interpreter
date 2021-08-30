@@ -6,7 +6,8 @@ static LLVMContext Context;
 static llvm::IRBuilder<> Builder(Context);
 static std::unique_ptr<llvm::Module> Module;
 static std::unordered_map<std::string, llvm::AllocaInst *> NamedValues;
-static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager;
+static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager =
+    nullptr;
 static std::unordered_map<std::string, std::unique_ptr<PrototypeAST>>
     FunctionProtos;
 
@@ -23,8 +24,8 @@ std::unordered_map<std::string, llvm::AllocaInst *> &getNamedValues() {
   return NamedValues;
 }
 
-llvm::legacy::FunctionPassManager &getFunctionPassManager() {
-  return *FunctionPassManager;
+llvm::legacy::FunctionPassManager *getFunctionPassManager() {
+  return FunctionPassManager.get();
 }
 
 void resetFunctionPassManager() {

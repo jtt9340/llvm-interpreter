@@ -1,6 +1,7 @@
 #include <llvm/IR/Function.h>     // llvm::Function
 #include <llvm/IR/Instructions.h> // llvm::PHINode, llvm::AllocaInst
 #include <llvm/IR/Value.h>        // llvm::Value
+#include <llvm/IR/LegacyPassManager.h> // llvm::legacy::PassManagerBase
 
 #ifndef loop
 /// Infinite loop.
@@ -31,13 +32,26 @@ class PrototypeAST;
 /// Sequence of characters that are considered whitespace.
 #define WHITESPACE_CHARS " \f\n\r\t\v"
 
+/// Apply a set of optimization passes to the given Pass Manager.
+///
+/// @param pass the Pass Manager instance to add passes to
+void AddPasses(llvm::legacy::PassManagerBase *pass);
+
 /// Set up the internal module for the interpreter and initialize all
 /// optimizations.
 ///
 /// This function should be called before running the interpreter. It
 /// will enable optimizations for generated function code and initialize
 /// the LLVM module to store symbol names.
-void InitializeModuleAndPassManager();
+///
+/// This function configures whether or not the internal module's data layout
+/// should be set to that of the native machine the interpreter is running on
+/// and is controlled by the "native" parameter. If there is to be cross compilation
+/// to object code, this parameter should be false.
+///
+/// @param native whether or not to additionally initialize the module for the native
+///        machine
+void InitializeModuleAndPassManager(bool native);
 
 /// Search through the global llvm::Module for a function with the given name.
 /// If no such function exists, generate a new function declaration, or return
@@ -63,14 +77,20 @@ llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *Function,
                                          const std::string &VarName);
 
 /// What to do when a function definition is encountered at the REPL.
-void HandleDefinition();
+///
+/// @param native whether or not the function definition should be handled
+///        relative to the native architecture the interpreter is running on
+void HandleDefinition(bool native);
 
 /// What to do when an extern function delcaration is encountered at the REPL.
 void HandleExtern();
 
 /// What to do when any other expression that is not a function definition or
 /// extern function declaration is encountered at the REPL.
-void HandleTopLevelExpression();
+///
+/// @param native whether or not the top-level expression should be handled relative
+///        to the native architecture the interpreter is running on
+void HandleTopLevelExpression(bool native);
 
 /// Helper function for adding n tabs to the output stream os.
 ///

@@ -181,4 +181,4 @@ fmt:
 	clang-format --style=llvm -i $(SRCS) \
 		$(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h)) \
 		$(EXAMPLESRCS) $(TESTSRCS)
-	shfmt -s -w -i 2 -ci test/lexer.sh
+	shfmt -s -w -i 2 -ci test/*.sh

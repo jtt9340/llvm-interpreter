@@ -22,7 +22,7 @@ else
   exe=()
   while IFS='' read -r exe_file; do
     exe+=("$exe_file")
-  done < <(find . -type d \( -path examples -o -path '*.dSYM' \) -prune -false -o -name $exe_name)
+  done < <(find . -type d \( -path '*examples' -o -path '*scratch' -o -path '*.dSYM' \) -prune -false -o -name $exe_name)
 fi
 
 case ${#exe[@]} in

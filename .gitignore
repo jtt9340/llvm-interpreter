@@ -8,6 +8,7 @@ test/*
 
 # Do not ignore source files in the test directory
 !test/*.cpp
+!test/*.sh
 
 # Used for creating test programs and other one-off programs
 scratch/

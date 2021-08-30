@@ -72,9 +72,9 @@ llvm::Function *FunctionAST::codegen() {
     llvm::verifyFunction(*Function);
 
     // Run optimizations on the generated code.
-#if 0
-    getFunctionPassManager().run(*Function);
-#endif
+    auto pass = getFunctionPassManager();
+    if (pass)
+      pass->run(*Function);
     return Function;
   }
   // Otherwise, generating the LLVM IR for the root expression failed,
