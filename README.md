@@ -13,8 +13,8 @@ Functions begin with the `def` keyword followed by a function name. Valid functi
 or lowercase letter `[A-Za-z]`, an underscore `_`, or a dollar sign `$`, followed by more upper or lowercase letters,
 underscores, and dollar signs, as well as numbers `[0-9]`. What follows must be a parameter list, i.e. zero or more identifiers
 encased in parentheses and separated by whitespace. This is different from most languages that choose to have their function
-declaration and invocation syntaxes mimic mathematical function notation--where a comma separates identifers--but in this case,
-all you need is whitespace. The rules for valid function paramter names are the same as rules for valid function names.
+declaration and invocation syntaxes mimic mathematical function notation--where a comma separates identifiers--but in this case,
+all you need is whitespace. The rules for valid function parameter names are the same as rules for valid function names.
 
 As mentioned earlier, Kaleidoscope is an expression oriented language: the body of a function is a single expression, so there is
 no `return` statement or even a `return` keyword, as the function takes on the value of the expression it contains. Since expressions
@@ -119,7 +119,7 @@ for i = 0, i < 10 in
 ```
 
 This does what you expect: it sets `i` to 0 once before the loop is run, then calls `putchard(42)` while
-`i < 10`. The `in` keyword separates the for loop delcaration from the body of code to run in the loop.
+`i < 10`. The `in` keyword separates the for loop declaration from the body of code to run in the loop.
 
 You might have noticed that `i` is never incremented, yet this loop will terminate. That is because `for`
 loops have an optional "step" clause that can appear after the condition that indicates how much to increment
@@ -206,7 +206,7 @@ def print_three_letters()
 ``` 
 
 ### Variables
-Oh, you can define local variables too :simple_smile:. In additon to using the `=` operator to mutate
+Oh, you can define local variables too :simple_smile:. In addition to using the `=` operator to mutate
 function parameters and the loop variable in for expressions, you can use the `let`/`in` syntax
 popular in functional languages like Haskell and OCaml. The `let`/`in` syntax is as follows:
 
@@ -236,7 +236,7 @@ def print_three_letters_v2(i)
 	# Admittedly there is no need to mutate i
 	# here as we could just call + when passing
 	# it to putchard, but I want to demonstrate
-	# mutating functoon parameters.
+	# mutating function parameters.
 	i = i + 2   :
 	putchard(i) :
 	i = i + 3   :
@@ -261,6 +261,62 @@ def fib(n)
 ```
 
 You can find the syntax of Kaleidoscope altogether in the sample file [test/kaleidoscope_input.txt](test/kaleidoscope_input.txt).
+
+## Compiling to Object Code
+Kaleidoscope now has the functionality to compile its code to object code, which can then be linked with any program that is
+compatible with the C ABI. To take advantage of this feature,
+1. Compile the interpreter (release or debug build, see below).
+2. Assuming the LLVM toolchain is installed on your computer (again, see below), run `llvm-as < /dev/null | llc -march=x86 -mattr=help`
+   to get a list of CPU architectures.
+3. Pass _one_ of the CPU architectures listed to the interpreter, for example `target/release/kaleidoscope skylake`.
+4. Define some functions in the resulting REPL session.
+5. Upon exiting the REPL session with Ctrl-D, you should see `Wrote session.o`. You can customize the name of the output
+   file by passing that as the _second_ parameter to the interpreter: `target/debug/kaleidoscope skylake output.o` would output
+   `output.o` instead of `session.o`.
+6. You now have an object file with the functions you defined (in the Kaleidoscope language!) that you can call to and link
+   against in other programs. For example, suppose you defined the `fib`onacii function in Kaleidoscope:
+   ```
+   def binary : 1(x y) y;
+   
+   def fib(n)
+   	let a = 1, b = 1, c in
+   		(for i = 3, i < n in
+   			c = a + b :
+   			a = b :
+   			b = c)
+   		: b;
+   ```
+   You could call this `fib`onacci function from C with
+   ```C
+   #include <stdio.h>
+   #include <stdlib.h>
+   
+   /*
+    * Must declare function headers for all functions you defined in Kaleidoscope
+    * that you plan to use. Remember, in Kaleidoscope there are only doubles are
+    * every function returns a double regardless of whether or not its return value
+    * is meaningful. However, functions CAN accept any number of parameters.
+    */
+   double fib(double x);
+   
+   int main(void) {
+   	char *line = NULL;
+   	size_t linecap;
+   	ssize_t linelen;
+   	unsigned long n;
+   
+   	printf("Enter a positive integer: ");
+   	linelen = getline(&line, &linecap, stdin);
+   
+   	if (linelen > 0) {
+   		n = strtoul((const char *) line, NULL, 10);
+   		printf("The %luth Fibonacci number is %.0f\n", n, fib((double) n));
+   	}
+   
+   	free(line);
+   	return 0;
+   }
+   ```
 
 ## Building From Source
 Ensure LLVM is installed on your machine. I've been building this against LLVM version 11.1.0; it might build with newer versions
@@ -290,6 +346,7 @@ make
 ```
 
 The resulting binary is called `kaleidoscope` and lives in the `target/release` directory.
+Try `target/release/kaleidoscope help` for usage instructions.
 You can also run
 
 ```Bash
@@ -317,8 +374,16 @@ make fmt
 
 For this target to run successfully you must also have `clang-format` and [`shfmt`](shfmt) installed.
 
-Finally, there is a rudimentary test that tests the lexer and that the interpreter doesn't crash with the aforementioned
-[test/kaleidoscope_input.txt](test/kaleidoscope_input.txt):
+Finally, there are some tests that test different components of the interpreter and live in the [test](test) directory. Namely:
+* [lexer.sh](test/lexer.sh) -- A shell script that tests that the lexer can correctly lex several different kinds of components.
+  It can be run directly: `test/lexer.sh`, or you can directly pass in the executable to the lexer: `test/lexer.sh target/debug/lexer`.
+* [ast.cpp](test/ast.cpp) -- Unit tests for testing the behavior of all the different AST nodes.
+* [object_code.sh](test/object_code.sh) -- Another shell script that tests the object code compilation functionality.
+  This can also be run directly: `test/object_code.sh` or also an interpreter executable can be passed in:
+  `test/object_code.sh target/release/kaleidoscope`.
+* [kaleidoscope_input.txt](test/kaleidoscope_input.txt) -- A sample Kaleidoscope source file demonstrating every implemented language
+  element thus far. This can be piped into an interpreter executable to demonstrate the interpreter and make sure it doesn't crash.
+Although some of the above tests can be run individually, it is recommended that they're all run at once with
 ```Bash
 make test
 ```

@@ -80,7 +80,7 @@ static int usage(const char *argv0) {
          "will be compiled into an object file called <name> (\"session.o\" if "
          "not given)\n"
          "that matches the given CPU architecture. Run `llvm-as < /dev/null | "
-         "llc -march=x86 -mattr-help`\n"
+         "llc -march=x86 -mattr=help`\n"
          "for a list of supported architectures. With \"help\", display this "
          "message."
       << std::endl;
