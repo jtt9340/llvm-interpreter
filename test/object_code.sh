@@ -6,11 +6,11 @@
 # test/object_code.sh target/release/kaleidoscope
 exe_name=kaleidoscope
 
-for arg in $@; do
-  compiler=$(echo $arg | cut -d = -f 2)
+for arg in "$@"; do
+  compiler=$(echo "$arg" | cut -d = -f 2)
   if [[ -n $CC ]]; then
-    echo Ambiguous values for CC: you want CC to be $compiler >&2
-    echo but it was previously defined to be $CC >&2
+    echo Ambiguous values for CC: you want CC to be "$compiler" >&2
+    echo but it was previously defined to be "$CC" >&2
     exit 1
   elif [[ $arg == CC=* ]]; then
     CC=$compiler
@@ -34,6 +34,7 @@ case ${#exe[@]} in
     ;;
   1)
     # Flatten the array into a single string
+    # shellcheck disable=SC2178
     exe=${exe[0]}
     ;;
   *)
@@ -47,6 +48,9 @@ esac
 
 exitcode=0
 
+# At this point $exe is not an array since it is flattened above,
+# and execution will only reach this point if $exe is not an array.
+# shellcheck disable=SC2128
 echo 'def avg(x y) (x + y) / 2;' | ASAN_OPTIONS=detect_container_overflow=0 $exe generic
 
 cat >main.c <<_EOF

@@ -146,24 +146,24 @@ Using the power of user-defined operators, we can define operators that are usua
 ```
 # Logical negation
 def unary !(v)
-	if v then
-		0
-	else
-		1;
+    if v then
+        0
+    else
+        1;
 
 # Unary negation
 def unary -(v)
-	0-v;
+    0-v;
 ```
 
 Using that last definition of `unary -` allows us to redefine the `abs` function from above as
 
 ```
 def abs(v)
-	if is_positive(v) then
-		v
-	else
-		-v; # Before we had to do 0-v which is what unary - does for us
+    if is_positive(v) then
+        v
+    else
+        -v; # Before we had to do 0-v which is what unary - does for us
 ```
 
 #### Defining Binary Operators
@@ -179,20 +179,20 @@ and the parameter list is. The higher the number, the higher the precedence.
 # We can define the logical "or" operator in our own language! How many languages can do that? Although, this is non-
 # short-circuiting.
 def binary | 5(LHS RHS)
-	if LHS then
-		1
-	else if RHS then
-		1
-	else
-		0;
+    if LHS then
+        1
+    else if RHS then
+        1
+    else
+        0;
 
 # Non short-circuiting logical "and". Notice this has a precedence of 6, so it will take higher precedence over | which
 # only has a precedence of 5.
 def binary & 6(LHS RHS)
-	if !LHS then
-		0
-	else
-		!!RHS; # Convert RHS to a 0/1 with !!
+    if !LHS then
+        0
+    else
+        !!RHS; # Convert RHS to a 0/1 with !!
 
 # Chain several functions together, similar to a ; in C.
 # Since its precendece is so low every other operator will
@@ -200,9 +200,9 @@ def binary & 6(LHS RHS)
 def binary : 1(x y) y;
 
 def print_three_letters()
-	putchard(65) :
-	putchard(67) :
-	putchard(69) ;
+    putchard(65) :
+    putchard(67) :
+    putchard(69) ;
 ``` 
 
 ### Variables
@@ -223,41 +223,41 @@ and makes the variable you define "shadow" or "overtake" the existing one with t
 
 ```
 def foreshadow(a)
-	putchard(a) : # Prints the ASCII character of a the parameter
-	let a = 78 in
-	putchard(a) ; # Prints the ASCII character of a the local variable
+    putchard(a) : # Prints the ASCII character of a the parameter
+    let a = 78 in
+    putchard(a) ; # Prints the ASCII character of a the local variable
 ```
 
 More examples below.
 
 ```
 def print_three_letters_v2(i)
-	putchard(i) :
-	# Admittedly there is no need to mutate i
-	# here as we could just call + when passing
-	# it to putchard, but I want to demonstrate
-	# mutating function parameters.
-	i = i + 2   :
-	putchard(i) :
-	i = i + 3   :
-	putchard(i) ;
+    putchard(i) :
+    # Admittedly there is no need to mutate i
+    # here as we could just call + when passing
+    # it to putchard, but I want to demonstrate
+    # mutating function parameters.
+    i = i + 2   :
+    putchard(i) :
+    i = i + 3   :
+    putchard(i) ;
 
 # Get the nth fibonacci number
 def fib(n)
-	# Variables must be declared with
-	# "let" before being used.
-	# Variable definitions are
-	# separated from the scope they appear
-	# in with the "in" keyword.
-	# Here we mutate a, b, and c
-	# in the for loop body to generate the
-	# nth fibonacci number.
-	let a = 1, b = 1, c in
-	(for i = 3, i < n in
-		c = a + b :
-		a = b :
-		b = c) :
-	b;
+    # Variables must be declared with
+    # "let" before being used.
+    # Variable definitions are
+    # separated from the scope they appear
+    # in with the "in" keyword.
+    # Here we mutate a, b, and c
+    # in the for loop body to generate the
+    # nth fibonacci number.
+    let a = 1, b = 1, c in
+    (for i = 3, i < n in
+        c = a + b :
+        a = b :
+        b = c) :
+    b;
 ```
 
 You can find the syntax of Kaleidoscope altogether in the sample file [test/kaleidoscope_input.txt](test/kaleidoscope_input.txt).
@@ -279,12 +279,12 @@ compatible with the C ABI. To take advantage of this feature,
    def binary : 1(x y) y;
    
    def fib(n)
-   	let a = 1, b = 1, c in
-   		(for i = 3, i < n in
-   			c = a + b :
-   			a = b :
-   			b = c)
-   		: b;
+       let a = 1, b = 1, c in
+           (for i = 3, i < n in
+               c = a + b :
+               a = b :
+               b = c)
+           : b;
    ```
    You could call this `fib`onacci function from C with
    ```C
@@ -300,21 +300,21 @@ compatible with the C ABI. To take advantage of this feature,
    double fib(double x);
    
    int main(void) {
-   	char *line = NULL;
-   	size_t linecap;
-   	ssize_t linelen;
-   	unsigned long n;
+       char *line = NULL;
+       size_t linecap;
+       ssize_t linelen;
+       unsigned long n;
    
-   	printf("Enter a positive integer: ");
-   	linelen = getline(&line, &linecap, stdin);
+       printf("Enter a positive integer: ");
+       linelen = getline(&line, &linecap, stdin);
    
-   	if (linelen > 0) {
-   		n = strtoul((const char *) line, NULL, 10);
-   		printf("The %luth Fibonacci number is %.0f\n", n, fib((double) n));
-   	}
+       if (linelen > 0) {
+           n = strtoul((const char *) line, NULL, 10);
+           printf("The %luth Fibonacci number is %.0f\n", n, fib((double) n));
+       }
    
-   	free(line);
-   	return 0;
+       free(line);
+       return 0;
    }
    ```
 
@@ -379,8 +379,9 @@ Finally, there are some tests that test different components of the interpreter 
   It can be run directly: `test/lexer.sh`, or you can directly pass in the executable to the lexer: `test/lexer.sh target/debug/lexer`.
 * [ast.cpp](test/ast.cpp) -- Unit tests for testing the behavior of all the different AST nodes.
 * [object_code.sh](test/object_code.sh) -- Another shell script that tests the object code compilation functionality.
-  This can also be run directly: `test/object_code.sh` or also an interpreter executable can be passed in:
-  `test/object_code.sh target/release/kaleidoscope`.
+  This can also be run directly: `test/object_code.sh`, but there are also some options: an interpreter executable can be passed in
+  (`test/object_code.sh target/release/kaleidoscope`) and/or a C compiler can be specified, since this test relies on one, with
+  `CC=` (`target/debug/kaleidoscope CC=gcc`).
 * [kaleidoscope_input.txt](test/kaleidoscope_input.txt) -- A sample Kaleidoscope source file demonstrating every implemented language
   element thus far. This can be piped into an interpreter executable to demonstrate the interpreter and make sure it doesn't crash.
 Although some of the above tests can be run individually, it is recommended that they're all run at once with
