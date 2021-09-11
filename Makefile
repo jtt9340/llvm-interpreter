@@ -5,6 +5,9 @@
 #
 UNAME := $(shell uname)
 
+#
+# Helper functions
+#
 # Retrieve all executable files from the given directory
 ifeq ($(UNAME),Darwin)
 find-executables =                    \
@@ -33,11 +36,21 @@ remove-if-exists =       \
 	fi
 
 #
+# Project files
+#
+SRCSROOT =	interpreter/src
+INCLUDEROOT = 	interpreter/include
+SRCS =	$(wildcard $(SRCSROOT)/*.cpp)
+OBJS =	$(SRCS:$(SRCSROOT)/%.cpp=%.o)
+TARGETDIR =	target
+EXE =	kaleidoscope
+
+#
 # Compiler flags
 #
 CC =	clang
 CXX =	clang++
-override CFLAGS += -Wall -Wextra -pedantic -pipe "-I$(CURDIR)/interpreter/include"
+override CFLAGS += -Wall -Wextra -pedantic -pipe "-I$(CURDIR)/$(INCLUDEROOT)"
 override CXXFLAGS += $(CFLAGS) $(shell llvm-config --cxxflags --ldflags --system-libs --libs all)
 
 ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
@@ -45,15 +58,6 @@ ifneq ($(shell command -v brew >/dev/null 2>&1 && brew ls --versions llvm@11),)
 	CPPFLAGS =	-I/usr/local/opt/llvm@11/include
 	LDFLAGS =	-L/usr/local/opt/llvm@11/lib -Wl,-rpath,/usr/local/opt/llvm@11/lib
 endif
-
-#
-# Project files
-#
-SRCSROOT =	interpreter/src
-SRCS =	$(wildcard $(SRCSROOT)/*.cpp)
-OBJS =	$(SRCS:$(SRCSROOT)/%.cpp=%.o)
-TARGETDIR =	target
-EXE =	kaleidoscope
 
 #
 # Debug build settings
@@ -179,6 +183,6 @@ fmt:
 		nixfmt --width=80 shell.nix; \
 	fi
 	clang-format --style=llvm -i $(SRCS) \
-		$(filter-out src/main.h src/KaleidoscopeJIT.h,$(SRCS:src/%.cpp=src/%.h)) \
+		$(filter-out $(INCLUDEROOT)/main.h $(INCLUDEROOT)/KaleidoscopeJIT.h,$(SRCS:$(SRCSROOT)/%.cpp=$(INCLUDEROOT)/%.h)) \
 		$(EXAMPLESRCS) $(TESTSRCS)
 	shfmt -s -w -i 2 -ci test/*.sh
