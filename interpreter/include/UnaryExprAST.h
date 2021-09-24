@@ -20,7 +20,8 @@ public:
   ///
   /// @param Opcode the unary operator
   /// @param Operand the expression being acted upon
-  UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand);
+  UnaryExprAST(SourceLocation Loc, char Opcode,
+               std::unique_ptr<ExprAST> Operand);
 
   /// Generate LLVM IR for a unary expression.
   llvm::Value *codegen() override;

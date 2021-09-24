@@ -2,11 +2,17 @@
 
 #ifndef PROTOTYPEAST_H
 #define PROTOTYPEAST_H
+#include "ExprAST.h" // full defintion of SourceLocation
+                     // must be #included after header guard
+					 // in order to prevent infinite recursion
+					 // since ExprAST.h #includes this file
 
 /// PrototypeAST - This class represents the "Prototype" for a function,
 /// which captures its name and its argument names (which inadvertently
 /// captures the number of formal parameters for that function).
 class PrototypeAST : public Showable {
+  /// Where in the source file this AST node appears.
+  SourceLocation Loc;
   /// The name of the function.
   std::string Name;
   /// The names of the formal paramters of the function.
@@ -27,11 +33,15 @@ public:
   ///        unary or binary operator
   /// @param Precedence the precedence of this binary operator of this Prototype
   ///        AST node represents a binary operator
-  PrototypeAST(const std::string &Name, std::vector<std::string> Args,
-               bool IsOperator = false, unsigned Precedence = 0);
+  PrototypeAST(SourceLocation Loc, const std::string &Name,
+               std::vector<std::string> Args, bool IsOperator = false,
+               unsigned Precedence = 0);
 
   /// Get the name of the function that this is a prototype for.
   const std::string &getName() const;
+
+  /// Get the source location (line and column number) of this prototype.
+  const SourceLocation loc() const;
 
   /// Generate LLVM IR for a function prototype.
   llvm::Function *codegen();

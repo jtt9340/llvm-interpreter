@@ -31,6 +31,7 @@ public:
   /// @param VarNames the variable names and values for the let/in expression
   /// @param Body the body of the let/in expression.
   LetExprAST(
+      SourceLocation Loc,
       std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
       std::unique_ptr<ExprAST> Body);
 

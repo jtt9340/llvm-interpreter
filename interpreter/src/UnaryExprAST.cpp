@@ -5,8 +5,9 @@
 using std::size_t;
 
 /// The constuctor for the UnaryExprAST class.
-UnaryExprAST::UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
-    : Op(Opcode), Operand(std::move(Operand)) {}
+UnaryExprAST::UnaryExprAST(SourceLocation Loc, char Opcode,
+                           std::unique_ptr<ExprAST> Operand)
+    : ExprAST(Loc), Op(Opcode), Operand(std::move(Operand)) {}
 
 /// Generate LLVM IR for a unary expression.
 llvm::Value *UnaryExprAST::codegen() {
@@ -20,7 +21,7 @@ llvm::Value *UnaryExprAST::codegen() {
     constexpr size_t errMsgBufSize = 25;
     char errMsg[errMsgBufSize];
     std::snprintf(errMsg, errMsgBufSize, "Unknown unary operator %c", Op);
-    return LogErrorV(errMsg);
+    return LogErrorV(errMsg, loc());
   }
 
   return getBuilder().CreateCall(Operator, OperandValue, "unop");

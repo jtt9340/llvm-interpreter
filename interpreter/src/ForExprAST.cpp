@@ -3,11 +3,12 @@
 #include "ForExprAST.h"
 
 /// The constructor for the ForExprAST class.
-ForExprAST::ForExprAST(const std::string &Name, std::unique_ptr<ExprAST> Start,
+ForExprAST::ForExprAST(SourceLocation Loc, const std::string &Name,
+                       std::unique_ptr<ExprAST> Start,
                        std::unique_ptr<ExprAST> End,
                        std::unique_ptr<ExprAST> Step,
                        std::unique_ptr<ExprAST> Body)
-    : VarName(Name), Start(std::move(Start)), End(std::move(End)),
+    : ExprAST(Loc), VarName(Name), Start(std::move(Start)), End(std::move(End)),
       Step(std::move(Step)), Body(std::move(Body)) {}
 
 /// Generate LLVM IR for a for expression.

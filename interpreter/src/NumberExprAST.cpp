@@ -3,7 +3,8 @@
 #include "NumberExprAST.h"
 
 /// The constructor for the NumberExprAST class.
-NumberExprAST::NumberExprAST(double Val) : Val(Val) {}
+NumberExprAST::NumberExprAST(SourceLocation Loc, double Val)
+    : ExprAST(Loc), Val(Val) {}
 
 /// Generate LLVM IR for a numeric constant.
 llvm::Value *NumberExprAST::codegen() {

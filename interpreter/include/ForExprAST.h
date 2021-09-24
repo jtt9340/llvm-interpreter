@@ -42,11 +42,11 @@ public:
   /// @param Start AST node for the initial expression
   /// @param End AST node for the condition
   /// @param Step AST node of the value that the induction variable will be
-  /// incremented by
+  ///        incremented by
   /// @param Body the body of the for expression
-  ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
-             std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
-             std::unique_ptr<ExprAST> Body);
+  ForExprAST(SourceLocation Loc, const std::string &VarName,
+             std::unique_ptr<ExprAST> Start, std::unique_ptr<ExprAST> End,
+             std::unique_ptr<ExprAST> Step, std::unique_ptr<ExprAST> Body);
 
   /// Generate LLVM IR for a for expression.
   llvm::Value *codegen() override;

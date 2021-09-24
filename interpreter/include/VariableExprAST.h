@@ -14,7 +14,7 @@ struct VariableExprAST : public ExprAST {
   ///
   /// @param Name the name of the variable that this AST node
   /// represents
-  explicit VariableExprAST(const std::string &Name);
+  VariableExprAST(SourceLocation Loc, const std::string &Name);
 
   /// Generate LLVM IR for a variable reference.
   llvm::Value *codegen() override;

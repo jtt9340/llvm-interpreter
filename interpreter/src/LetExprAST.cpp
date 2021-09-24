@@ -5,9 +5,10 @@
 
 /// The constructor for the LetExprAST class.
 LetExprAST::LetExprAST(
+    SourceLocation Loc,
     std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
     std::unique_ptr<ExprAST> Body)
-    : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
+    : ExprAST(Loc), VarNames(std::move(VarNames)), Body(std::move(Body)) {}
 
 /// Generate LLVM IR for a let/in expression.
 llvm::Value *LetExprAST::codegen() {
@@ -75,7 +76,7 @@ std::string LetExprAST::toString(const unsigned depth) const {
     const auto *InitialExpr = it->second.get();
 
     auto InitialExprS = InitialExpr ? InitialExpr->toString(depth + 1)
-                                    : NumberExprAST(0.0).toString();
+                                    : NumberExprAST(SourceLocation(), 0.0).toString();
 
     insert_indent(repr, depth + 1);
     repr << VarName << " = " << strltrim(InitialExprS)

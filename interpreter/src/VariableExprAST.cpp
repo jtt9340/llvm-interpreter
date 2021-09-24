@@ -3,7 +3,8 @@
 #include "VariableExprAST.h"
 
 /// The constructor for the VariableExprAST class.
-VariableExprAST::VariableExprAST(const std::string &Name) : Name(Name) {}
+VariableExprAST::VariableExprAST(SourceLocation Loc, const std::string &Name)
+    : ExprAST(Loc), Name(Name) {}
 
 /// Generate LLVM IR for a variable reference.
 llvm::Value *VariableExprAST::codegen() {
@@ -13,7 +14,7 @@ llvm::Value *VariableExprAST::codegen() {
   if (!V) {
     std::ostringstream errMsg("Unknown variable name: ", std::ios_base::ate);
     errMsg << Name;
-    return LogErrorV(errMsg.str().c_str());
+    return LogErrorV(errMsg.str().c_str(), loc());
   }
 
   return getBuilder().CreateLoad(V, Name.c_str());

@@ -4,9 +4,9 @@
 
 using std::size_t;
 
-CallExprAST::CallExprAST(const std::string &Callee,
+CallExprAST::CallExprAST(SourceLocation Loc, const std::string &Callee,
                          std::vector<std::unique_ptr<ExprAST>> Args)
-    : Callee(Callee), Args(std::move(Args)) {}
+    : ExprAST(Loc), Callee(Callee), Args(std::move(Args)) {}
 
 /// Generate LLVM IR for a function call.
 llvm::Value *CallExprAST::codegen() {
@@ -16,7 +16,7 @@ llvm::Value *CallExprAST::codegen() {
   llvm::Function *CalleeF = getFunction(Callee);
   if (!CalleeF) {
     errMsg << "Unknown function referenced: " << Callee;
-    return LogErrorV(errMsg.str().c_str());
+    return LogErrorV(errMsg.str().c_str(), loc());
   }
 
   // Handle argument mismatch error.
@@ -25,7 +25,7 @@ llvm::Value *CallExprAST::codegen() {
   if (expected != actual) {
     errMsg << "Wrong number of arguments passed to " << Callee << ", expecting "
            << expected << " but got " << actual;
-    return LogErrorV(errMsg.str().c_str());
+    return LogErrorV(errMsg.str().c_str(), loc());
   }
 
   std::vector<llvm::Value *> ArgsV;

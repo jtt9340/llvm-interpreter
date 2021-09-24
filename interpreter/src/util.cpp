@@ -26,6 +26,21 @@ std::string Showable::toString(unsigned depth) const {
   return repr.str();
 }
 
+// Declare private static field TheInstance in the DebugInfo struct.
+std::unique_ptr<DebugInfo> DebugInfo::TheInstance;
+
+llvm::DIType *DebugInfo::getDoubleTy() {
+  return DblTy ? DblTy
+               : DblTy = borrowDBuilder().createBasicType(
+                     "double", 64, llvm::dwarf::DW_ATE_float);
+}
+
+DebugInfo *DebugInfo::getInstance() {
+  if (!TheInstance)
+    TheInstance = std::unique_ptr<DebugInfo>(new DebugInfo);
+  return TheInstance.get();
+}
+
 void AddPasses(llvm::legacy::PassManagerBase *pass) {
   // Turn alloca instructions into registers. (mem2reg)
   pass->add(llvm::createPromoteMemoryToRegisterPass());
@@ -51,13 +66,20 @@ void InitializeModuleAndPassManager(bool native) {
     borrowModule().setDataLayout(
         KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
+    auto KSDbgInfo = DebugInfo::getInstance();
+    auto &dwarfBuilder = borrowDBuilder();
+    KSDbgInfo->CompileUnit = dwarfBuilder.createCompileUnit(
+        // We specify C as the language since we are following the calling
+        // conventions of C. Otherwise, we would have to tell the debugger
+        // about our calling convention and ABI.
+        llvm::dwarf::DW_LANG_C, dwarfBuilder.createFile("fib.ks", "."),
+        "Kaleidoscope Compiler", 0, "", 0);
+
     // Create a new pass manager attached to it. We are using a function pass
     // manager, which passes over code at the function level, looking for
     // optimizations.
     resetFunctionPassManager();
-
     auto FunctionPassManager = getFunctionPassManager();
-    AddPasses(FunctionPassManager);
 
     // Initialize all of the above passes.
     FunctionPassManager->doInitialization();
@@ -95,6 +117,25 @@ llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *Function,
   // probably take that type as a parameter to this funciton.
   return TmpB.CreateAlloca(llvm::Type::getDoubleTy(getContext()), 0,
                            VarName.c_str());
+}
+
+llvm::DISubroutineType *CreateFunctionType(unsigned NumArgs,
+                                           llvm::DIFile *Unit) {
+  // A SmallVector stores at most 8 (in this case) instances of
+  // llvm::Metadata * on the stack before heap allocating.
+  llvm::SmallVector<llvm::Metadata *, 8> ElementTypes;
+  auto KSDbgInfo = DebugInfo::getInstance();
+  llvm::DIType *DoubleType = KSDbgInfo->getDoubleTy();
+
+  // Add the return type.
+  ElementTypes.push_back(DoubleType);
+
+  for (unsigned i = 0; i < NumArgs; i++)
+    ElementTypes.push_back(DoubleType);
+
+  auto &dwarfBuilder = borrowDBuilder();
+  return dwarfBuilder.createSubroutineType(
+      dwarfBuilder.getOrCreateTypeArray(ElementTypes));
 }
 
 /// What to do when a function definition is encountered at the REPL.
@@ -141,33 +182,11 @@ void HandleTopLevelExpression(bool native) {
   const auto expr = ParseTopLevelExpr();
   if (expr) {
     const auto *ir = expr->codegen();
-    if (native && ir) {
-      // Just-in-time compile the generated LLVM IR
-      // We need to keep a handle to it so that it can be freed later
-      auto H = KaleidoscopeJIT::getInstance()->addModule(takeModule());
-      InitializeModuleAndPassManager(native);
-
-      // Search the JIT for the __anon_expr symbol
-      auto ExprSymbol =
-          KaleidoscopeJIT::getInstance()->findSymbol("__anon_expr");
-      assert(ExprSymbol);
-
-      // Get the memory address of the function. This could fail if
-      // for some reason the function isn't found. Just report an error
-      // in this case
-      auto ExprSymbolAddress = ExprSymbol.getAddress();
-      if (auto E = ExprSymbolAddress.takeError()) {
-        LogError(toString(std::move(E)).c_str());
-      } else {
-        // Cast the symbol's address to a function pointer
-        // and call the function natively
-        double (*FP)() = reinterpret_cast<double (*)()>(
-            static_cast<intptr_t>(*ExprSymbolAddress));
-        std::cerr << FP() << std::endl;
-      }
-
-      // Delete the module created for the anonymous expression
-      KaleidoscopeJIT::getInstance()->removeModule(H);
+    if (ir) {
+      ir->print(llvm::errs());
+    } else {
+      std::cerr << "Error generating code for top level expression"
+                << std::endl;
     }
   } else {
     // Skip token to handle errors.
@@ -189,17 +208,17 @@ std::string &strltrim(std::string &s) {
 }
 
 // TODO - make error reports more user friendly
-std::unique_ptr<ExprAST> LogError(const char *Str) {
-  std::cerr << "LogError: " << Str << std::endl;
+std::unique_ptr<ExprAST> LogError(const char *Str, const SourceLocation loc) {
+  std::cerr << "LogError: " << Str << " at " << loc.toString() << std::endl;
   return nullptr;
 }
 
-std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
-  LogError(Str);
+std::unique_ptr<PrototypeAST> LogErrorP(const char *Str, const SourceLocation loc) {
+  LogError(Str, loc);
   return nullptr;
 }
 
-llvm::Value *LogErrorV(const char *Str) {
-  LogError(Str);
+llvm::Value *LogErrorV(const char *Str, SourceLocation loc) {
+  LogError(Str, loc);
   return nullptr;
 }

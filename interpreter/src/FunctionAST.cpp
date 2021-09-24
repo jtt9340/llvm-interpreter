@@ -7,9 +7,10 @@
 #include "ExprAST.h"
 #include "FunctionAST.h"
 
-FunctionAST::FunctionAST(std::unique_ptr<PrototypeAST> Proto,
+FunctionAST::FunctionAST(SourceLocation Loc,
+                         std::unique_ptr<PrototypeAST> Proto,
                          std::unique_ptr<ExprAST> Body)
-    : Proto(std::move(Proto)), Body(std::move(Body)) {}
+    : Loc(Loc), Proto(std::move(Proto)), Body(std::move(Body)) {}
 
 /// Generate LLVM IR for a function definition.
 llvm::Function *FunctionAST::codegen() {
@@ -44,6 +45,23 @@ llvm::Function *FunctionAST::codegen() {
       llvm::BasicBlock::Create(getContext(), "entry", Function);
   auto &Builder = getBuilder();
   Builder.SetInsertPoint(BB);
+
+  auto KSDbgInfo = DebugInfo::getInstance();
+  auto &dwarfBuilder = borrowDBuilder();
+  // Obtain a DWARF file based on the directory and name of the file we are
+  // currently compiling.
+  llvm::DIFile *Unit =
+      dwarfBuilder.createFile(KSDbgInfo->CompileUnit->getFilename(),
+                              KSDbgInfo->CompileUnit->getDirectory());
+
+  llvm::DIScope *FContext = Unit;
+  unsigned LineNo = 0;
+  unsigned ScopeLine = 0;
+  llvm::DISubprogram *SubProgram = dwarfBuilder.createFunction(
+      FContext, P.getName(), llvm::StringRef(), Unit, LineNo,
+      CreateFunctionType(Function->arg_size(), Unit), ScopeLine,
+      llvm::DINode::FlagPrototyped);
+  Function->setSubprogram(SubProgram);
 
   // Record the function arguments in the NamedValues map.
   auto &NamedValues = getNamedValues();
@@ -88,6 +106,8 @@ llvm::Function *FunctionAST::codegen() {
 
   return nullptr;
 }
+
+const SourceLocation FunctionAST::loc() const { return Loc; }
 
 /// "FunctionAST(prototype, body)"
 std::string FunctionAST::toString(const unsigned depth) const {

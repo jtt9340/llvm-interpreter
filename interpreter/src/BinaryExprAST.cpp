@@ -4,9 +4,10 @@
 #include "VariableExprAST.h"
 
 /// The constuctor for the BinaryExprAST class.
-BinaryExprAST::BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
+BinaryExprAST::BinaryExprAST(SourceLocation Loc, char op,
+                             std::unique_ptr<ExprAST> LHS,
                              std::unique_ptr<ExprAST> RHS)
-    : Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+    : ExprAST(Loc), Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
 /// Generate LLVM IR for a binary expression.
 llvm::Value *BinaryExprAST::codegen() {
@@ -71,14 +72,14 @@ llvm::Value *BinaryExprAST::codegen() {
     VariableExprAST *LHSE = dynamic_cast<VariableExprAST *>(LHS.get());
     if (!LHSE) {
       errMsg << LHSS << " is not a variable expression.";
-      return LogErrorV(errMsg.str().c_str());
+      return LogErrorV(errMsg.str().c_str(), loc());
     }
 
     // Look up the variable value by name.
     llvm::Value *Var = getNamedValues().at(LHSE->Name);
     if (!Var) {
       errMsg << LHSE->Name << " is an unknown variable name.";
-      return LogErrorV(errMsg.str().c_str());
+      return LogErrorV(errMsg.str().c_str(), loc());
     }
 
     // Create the store instruction.

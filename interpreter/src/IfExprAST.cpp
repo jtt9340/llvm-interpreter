@@ -3,10 +3,11 @@
 #include "IfExprAST.h"
 
 /// The constructor for the IfExprAST class.
-IfExprAST::IfExprAST(std::unique_ptr<ExprAST> Cond,
+IfExprAST::IfExprAST(SourceLocation Loc, std::unique_ptr<ExprAST> Cond,
                      std::unique_ptr<ExprAST> Then,
                      std::unique_ptr<ExprAST> Else)
-    : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+    : ExprAST(Loc), Cond(std::move(Cond)), Then(std::move(Then)),
+      Else(std::move(Else)) {}
 
 /// Generate LLVM IR for an if expression.
 llvm::Value *IfExprAST::codegen() {

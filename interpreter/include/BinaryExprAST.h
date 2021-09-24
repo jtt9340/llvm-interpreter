@@ -21,7 +21,7 @@ public:
   /// @param op the binary operator
   /// @param LHS the left-hand-side of the binary operator
   /// @param RHS the right-hand-side of the binary operator
-  BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
+  BinaryExprAST(SourceLocation Loc, char op, std::unique_ptr<ExprAST> LHS,
                 std::unique_ptr<ExprAST> RHS);
 
   /// Generate LLVM IR for a binary expression.

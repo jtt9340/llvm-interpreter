@@ -20,7 +20,7 @@ public:
   ///
   /// @param Callee the name of the function being called
   /// @param Args the arguments passed to the function
-  CallExprAST(const std::string &Callee,
+  CallExprAST(SourceLocation Loc, const std::string &Callee,
               std::vector<std::unique_ptr<ExprAST>> Args);
 
   /// Generate LLVM IR for a function call.

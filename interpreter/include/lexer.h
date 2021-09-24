@@ -1,3 +1,5 @@
+#include "ExprAST.h" // SourceLocation
+
 #ifndef LEXER_H
 #define LEXER_H
 
@@ -66,9 +68,8 @@ const std::string tokenToString(Token tok);
 /// If another unrecognized character is found, its ASCII value is returned.
 ///
 /// @return an integer, either an enum Token if the lexed token is a recognized
-/// token,
-///         or the ASCII value of the first character read
-static int gettok();
+///         token, or the ASCII value of the first character read
+static std::pair<int, SourceLocation> gettok();
 
 /// Get the next token as lexed by gettok(), updating the internal token buffer.
 /// When getting the next token, this funcion should be preferred to gettok()
@@ -77,7 +78,7 @@ static int gettok();
 /// to all sorts of trouble.
 ///
 /// @return the next token lexed by gettok()
-int getNextToken();
+std::pair<int, SourceLocation> getNextToken();
 
 /// Get the current token in the token buffer without updating it.
 ///

@@ -4,14 +4,17 @@
 #include "PrototypeAST.h"
 
 /// Constructor for the PrototypeAST class.
-PrototypeAST::PrototypeAST(const std::string &Name,
+PrototypeAST::PrototypeAST(SourceLocation Loc, const std::string &Name,
                            std::vector<std::string> Args, bool IsOperator,
                            unsigned Precedence)
-    : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
+    : Loc(Loc), Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
       Precedence(Precedence) {}
 
 /// Getter for the "Name" field of instances of PrototypeAST.
 const std::string &PrototypeAST::getName() const { return Name; }
+
+/// Getter for the "Loc" field of instances of PrototypeAST.
+const SourceLocation PrototypeAST::loc() const { return Loc; }
 
 /// Generate LLVM IR for a function prototype.
 llvm::Function *PrototypeAST::codegen() {

@@ -28,8 +28,8 @@ public:
   /// @param Cond the condition that the if expression evaluates
   /// @param Then the code to evaluate if the condition is true
   /// @param Else the code to evaluate if the condition is false
-  IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
-            std::unique_ptr<ExprAST> Else);
+  IfExprAST(SourceLocation Loc, std::unique_ptr<ExprAST> Cond,
+            std::unique_ptr<ExprAST> Then, std::unique_ptr<ExprAST> Else);
 
   /// Generate LLVM IR for an if expression.
   llvm::Value *codegen() override;

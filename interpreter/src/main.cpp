@@ -51,7 +51,6 @@ extern "C" DLLEXPORT double putd(double d) {
 ///                 interactive REPL
 static void MainLoop(const char *ProgName, bool native) {
   loop {
-    std::cerr << ProgName << "> ";
     switch (getCurrentToken()) {
     case tok_eof:
       return;
@@ -114,7 +113,6 @@ int main(int argc, const char **argv) {
   InitializeModuleAndPassManager(!CompileToObjectCode);
 
   // Get ready to parse the first token.
-  std::cerr << argv[0] << "> ";
   getNextToken();
 
   // Run the REPL now.
@@ -171,7 +169,8 @@ int main(int argc, const char **argv) {
     pass.run(borrowModule());
     dest.flush();
     llvm::outs() << "Wrote " << Filename;
-  }
+  } else
+    borrowDBuilder().finalize();
 
   return 0;
 }

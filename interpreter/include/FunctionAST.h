@@ -6,6 +6,8 @@
 /// FunctionAST - a function prototype coupled with the code of the function
 /// to create a complete function definition.
 class FunctionAST : public Showable {
+  /// Where in the source file this AST node appears.
+  SourceLocation Loc;
   /// The function prototype that represents this function definition.
   std::unique_ptr<PrototypeAST> Proto;
   /// The AST that represents the code for this function definition.
@@ -18,11 +20,13 @@ public:
   ///
   /// @param Proto the function prototype for this function definition
   /// @param the body of the function
-  FunctionAST(std::unique_ptr<PrototypeAST> Proto,
+  FunctionAST(SourceLocation Loc, std::unique_ptr<PrototypeAST> Proto,
               std::unique_ptr<ExprAST> Body);
 
   /// Generate LLVM IR for a function definition.
   llvm::Function *codegen();
+
+  const SourceLocation loc() const;
 
   /// Return a helpful string representation of this FunctionAST node useful
   /// for debugging.

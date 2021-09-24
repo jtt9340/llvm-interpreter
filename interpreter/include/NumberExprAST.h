@@ -15,7 +15,7 @@ public:
   /// The constructor for the NumberExprAST class.
   ///
   /// @param Val the numeric value that this node of the AST represents
-  explicit NumberExprAST(double Val);
+  NumberExprAST(SourceLocation Loc, double Val);
 
   /// Generate LLVM IR for a numeric constant.
   llvm::Value *codegen() override;

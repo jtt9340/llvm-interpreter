@@ -49,15 +49,15 @@ std::unique_ptr<ExprAST> ParseNumberExpr() {
   return std::move(Result);
 }
 
-/// parenexpr ::= '(' expression  ')'
+/// parenexpr ::= '(' expression ')'
 std::unique_ptr<ExprAST> ParseParenExpr() {
-  getNextToken();             // consume '('
+  const auto loc = getNextToken().second; // consume '('
   auto V = ParseExpression(); // the 'expression' part in our production above
   if (!V)
     return nullptr; // we did not find an expression, just an (
 
   if (getCurrentToken() != ')')
-    return LogError("expected ')'");
+    return LogError("expected ')'", loc);
   getNextToken(); // consume ')'
   return V;
 }
@@ -67,63 +67,72 @@ std::unique_ptr<ExprAST> ParseParenExpr() {
 ///   ::= identifier '(' expression ')'   Function calls.
 std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   const std::string IdName = getIdentifierStr();
+  auto maybeParenLocPair = getNextToken(); // Consume the identififer and return the token after that
+  auto currentToken = maybeParenLocPair.first;
+  auto loc = maybeParenLocPair.second;
 
-  getNextToken(); // Consume the identififer
-
-  if (getCurrentToken() != '(') {
+  if (currentToken != '(') {
     // This is a variable reference, not a function call
-    return std::make_unique<VariableExprAST>(IdName);
+    return std::make_unique<VariableExprAST>(loc, IdName);
   }
 
   // Otherwise, this is a function call
-  getNextToken(); // Consume the '('
+  auto maybeCloseParenLocPair = getNextToken(); // Consume the '(' and return the token after that
+  currentToken = maybeCloseParenLocPair.first;
+  loc = maybeCloseParenLocPair.second;
   std::vector<std::unique_ptr<ExprAST>> Args;
-  if (getCurrentToken() != ')') {
+  if (currentToken != ')') {
     loop {
       if (auto Arg = ParseExpression())
         Args.push_back(std::move(Arg));
       else
         return nullptr; // Expected an expression
 
-      if (getCurrentToken() == ')')
+      if (currentToken == ')')
         break; // We've finished parsing the function call
 
-      if (getCurrentToken() != ',')
-        return LogError("Expected ')' or ',' in argument list");
-      getNextToken(); // Consume the function argument expression
+      if (currentToken != ',')
+        return LogError("Expected ')' or ',' in argument list", loc);
+	  auto argLocPair = getNextToken(); // Consume the function argument expression
+	  currentToken = argLocPair.first;
+	  loc = argLocPair.second;
     }
   }
 
-  getNextToken(); // Consume the ')'
+  auto closeParenLocPair = getNextToken(); // Consume the ')'
+  loc = closeParenLocPair.second;
 
-  return std::make_unique<CallExprAST>(IdName, std::move(Args));
+  return std::make_unique<CallExprAST>(loc, IdName, std::move(Args));
 }
 
 /// letexpr ::= 'let' identifier ('=' expression)?
 ///         (',' identifier ('=' expression)?)* 'in' expression
+// TODO JOEY Keep going from here
 std::unique_ptr<ExprAST> ParseLetExpr() {
-  getNextToken(); // Consume the "let" token.
+  auto identLocPair = getNextToken(); // Consume the "let" token and return the token after that.
+  auto curloc = identLocPair.second;
 
   std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames;
-  int curtok;
+  int curtok = identLocPair.first;
 
   // At least one variable name is required.
-  if ((curtok = getCurrentToken()) != tok_identifier) {
+  if (curtok != tok_identifier) {
     std::ostringstream errMsg;
     errMsg << "Expected " << tokenToString(tok_identifier) << " after "
            << tokenToString(tok_let) << " but instead got "
            << tokenToString(static_cast<Token>(curtok));
-    return LogError(errMsg.str().c_str());
+    return LogError(errMsg.str().c_str(), curloc);
   }
 
   loop {
     const std::string VarName = getIdentifierStr();
-    getNextToken(); // Consume the identifier we just read.
+    auto maybeEqLocPair = getNextToken(); // Consume the identifier we just read and return the token after that.
 
     // Read the optional initializer
     std::unique_ptr<ExprAST> InitialValue;
-    if ((curtok = getCurrentToken()) == '=') {
-      getNextToken(); // Consume the '='.
+    if ((curtok = maybeEqLocPair.first) == '=') {
+      auto nextTokLocPair = getNextToken(); // Consume the '=' and return the token after that.
+	  curtok = nextTokLocPair.first;
 
       InitialValue = ParseExpression();
       if (!InitialValue)
@@ -133,22 +142,22 @@ std::unique_ptr<ExprAST> ParseLetExpr() {
     VarNames.push_back(std::make_pair(VarName, std::move(InitialValue)));
 
     // Break if there are no more variables being declared.
-    if ((curtok = getCurrentToken()) != ',')
+    if (curtok != ',')
       break;
-    getNextToken(); // Consume the ','.
+    auto maybeIdentLocPair = getNextToken(); // Consume the ',' and return the token after that.
 
-    if ((curtok = getCurrentToken()) != tok_identifier) {
+    if ((curtok = maybeIdentLocPair.first) != tok_identifier) {
       std::ostringstream errMsg;
       errMsg << "Expected " << tokenToString(tok_identifier)
              << "after ',' but instead got "
              << tokenToString(static_cast<Token>(curtok));
-      return LogError(errMsg.str().c_str());
+      return LogError(errMsg.str().c_str(), maybeIdentLocPair.second);
     }
   }
 
   // At this point we have parsed all the variable declarations and their
   // optional initializers, so we are looking for the 'in' keyword.
-  if ((curtok = getCurrentToken()) != tok_in) {
+  if (curtok != tok_in) {
     std::ostringstream errMsg(
         "Expected 'in' keyword after 'let' keyword but instead got: ",
         std::ios_base::ate);
@@ -244,8 +253,9 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
     // At this point, we are indeed parsing a binary operator with a high enough
     // precedence. If it wasn't a binary operator, TokPrec would be -1 which
     // would indeed be < ExprPrec, so we wouldn't have gotten here by now.
-    int BinOp = getCurrentToken();
-    getNextToken(); // eat the binary operator
+    auto binOpLocPair = getNextToken(); // eat the binary operator
+    int BinOp = binOpLocPair.first;
+    auto loc = binOpLocPair.second;
 
     // Parse the unary expression after the binary operator.
     // (If there is no unary operator, then this just parses
@@ -266,8 +276,8 @@ std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
 
     // Otherwise, the current binary operator takes precedence, so let's build
     // an AST node containing the current binary operator and its operands.
-    LHS =
-        std::make_unique<BinaryExprAST>(BinOp, std::move(LHS), std::move(RHS));
+    LHS = std::make_unique<BinaryExprAST>(loc, BinOp, std::move(LHS),
+                                          std::move(RHS));
   } // Loop back to the top, looking for more binary operators until there are
     // no more expressions to parse.
 }
@@ -286,6 +296,8 @@ std::unique_ptr<ExprAST> ParseExpression() {
 ///   ::= binary LETTER number? (id, id)
 std::unique_ptr<PrototypeAST> ParsePrototype() {
   std::string FnName;
+  int currentToken;
+  SourceLocation loc;
 
   enum { identifier, unary, binary } Kind;
   unsigned BinaryPrecedence = 30;
@@ -294,34 +306,54 @@ std::unique_ptr<PrototypeAST> ParsePrototype() {
   case tok_identifier:
     FnName = getIdentifierStr();
     Kind = identifier;
-    getNextToken();
+	{
+		auto tokLocPair = getNextToken();
+		currentToken = tokLocPair.first;
+		loc = tokLocPair.second;
+	}
     break;
   case tok_unary:
-    getNextToken();
-    if (!isascii(getCurrentToken())) {
+	{
+		auto tokLocPair = getNextToken();
+		currentToken = tokLocPair.first;
+		loc = tokLocPair.second;
+	}
+    if (!isascii(currentToken)) {
       std::ostringstream errMsg("Expected unary operator but found ",
                                 std::ios_base::ate);
-      errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+      errMsg << tokenToString(static_cast<Token>(currentToken));
       return LogErrorP(errMsg.str().c_str());
     }
-    FnName = std::string("unary") + static_cast<char>(getCurrentToken());
+    FnName = std::string("unary") + static_cast<char>(currentToken);
     Kind = unary;
-    getNextToken();
+	{
+		auto tokLocPair = getNextToken();
+		currentToken = tokLocPair.first;
+		loc = tokLocPair.second;
+	}
     break;
   case tok_binary:
-    getNextToken();
-    if (!isascii(getCurrentToken())) {
+	{
+		auto tokLocPair = getNextToken();
+		currentToken = tokLocPair.first;
+		loc = tokLocPair.second;
+	}
+    if (!isascii(currentToken)) {
       std::ostringstream errMsg("Expected binary operator but found ",
                                 std::ios_base::ate);
-      errMsg << tokenToString(static_cast<Token>(getCurrentToken()));
+      errMsg << tokenToString(static_cast<Token>(currentToken));
       return LogErrorP(errMsg.str().c_str());
     }
-    FnName = std::string("binary") + static_cast<char>(getCurrentToken());
+    FnName = std::string("binary") + static_cast<char>(currentToken);
     Kind = binary;
-    getNextToken();
+	{
+		auto tokLocPair = getNextToken();
+		currentToken = tokLocPair.first;
+		loc = tokLocPair.second;
+	}
 
     // Read the precedence if present
-    if (getCurrentToken() == tok_number) {
+    if (currentToken == tok_number) {
       if (getNumVal() < 1 || getNumVal() > 100) {
         std::ostringstream errMsg("Invalid predence ", std::ios_base::ate);
         errMsg << getNumVal() << ": must be >= 1 or <= 100";
@@ -504,8 +536,8 @@ std::unique_ptr<ExprAST> ParseForExpr() {
 std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
   if (auto E = ParseExpression()) {
     // Make an anonymous function prototype.
-    auto Proto = std::make_unique<PrototypeAST>("__anon_expr",
-                                                std::vector<std::string>());
+    auto Proto =
+        std::make_unique<PrototypeAST>("main", std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;
