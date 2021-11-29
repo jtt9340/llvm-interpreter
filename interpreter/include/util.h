@@ -36,10 +36,10 @@ private:
   static std::unique_ptr<DebugInfo> TheInstance;
 };
 
-// Forward-declare ExprAST, PrototypeAST, and SourceLocation: these classes are needed in
-// this file but we cannot #include "ExprAST.h" and #include "PrototypeAST.h"
-// because they will #include this file, either directly or indirectly, thus
-// causing a circular dependency.
+// Forward-declare ExprAST, PrototypeAST, and SourceLocation: these classes are
+// needed in this file but we cannot #include "ExprAST.h" and #include
+// "PrototypeAST.h" because they will #include this file, either directly or
+// indirectly, thus causing a circular dependency.
 class ExprAST;
 class PrototypeAST;
 class SourceLocation;
@@ -142,7 +142,8 @@ std::string &strltrim(std::string &s);
 /// These are basic helper functions for basic error handling.
 std::unique_ptr<ExprAST> LogError(const char *Str, const SourceLocation loc);
 
-std::unique_ptr<PrototypeAST> LogErrorP(const char *Str, const SourceLocation loc);
+std::unique_ptr<PrototypeAST> LogErrorP(const char *Str,
+                                        const SourceLocation loc);
 
 llvm::Value *LogErrorV(const char *Str, const SourceLocation loc);
 

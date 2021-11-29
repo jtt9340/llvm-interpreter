@@ -4,8 +4,8 @@
 #define PROTOTYPEAST_H
 #include "ExprAST.h" // full defintion of SourceLocation
                      // must be #included after header guard
-					 // in order to prevent infinite recursion
-					 // since ExprAST.h #includes this file
+                     // in order to prevent infinite recursion
+                     // since ExprAST.h #includes this file
 
 /// PrototypeAST - This class represents the "Prototype" for a function,
 /// which captures its name and its argument names (which inadvertently

@@ -63,6 +63,8 @@ void InitializeModuleAndPassManager(bool native) {
   newModule("Kaleidoscope");
 
   if (native) {
+    // Create and initialize a DIBuilder.
+    newDBuilder();
     borrowModule().setDataLayout(
         KaleidoscopeJIT::getInstance()->getTargetMachine().createDataLayout());
 
@@ -213,7 +215,8 @@ std::unique_ptr<ExprAST> LogError(const char *Str, const SourceLocation loc) {
   return nullptr;
 }
 
-std::unique_ptr<PrototypeAST> LogErrorP(const char *Str, const SourceLocation loc) {
+std::unique_ptr<PrototypeAST> LogErrorP(const char *Str,
+                                        const SourceLocation loc) {
   LogError(Str, loc);
   return nullptr;
 }

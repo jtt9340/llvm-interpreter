@@ -18,7 +18,7 @@ class SourceLocation : public Showable {
   int Line, Col;
 
 public:
-  SourceLocation() = default;
+  SourceLocation();
 
   SourceLocation(int Line, int Col);
 

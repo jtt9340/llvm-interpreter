@@ -86,11 +86,11 @@ int getCurrentToken() { return CurTok; }
 
 static std::pair<int, const SourceLocation> advance() {
   int LastChar = std::getchar();
-  static SourceLocation LexLoc(1, 0);
+  static SourceLocation LexLoc(1, 1);
 
   if (LastChar == '\n' || LastChar == '\r') {
     LexLoc.line()++;
-    LexLoc.col() = 0;
+    LexLoc.col() = 1;
   } else
     LexLoc.col()++;
   return std::make_pair(LastChar, LexLoc);
@@ -115,7 +115,7 @@ static std::pair<int, SourceLocation> gettok() {
     LastChar = advance().first;
     while (std::isalnum(LastChar) || LastChar == '_' || LastChar == '$') {
       IdentifierStr += LastChar;
-	  LastChar = advance().first;
+      LastChar = advance().first;
     }
 
     if (IdentifierStr == "def")

@@ -14,6 +14,8 @@ static std::unique_ptr<llvm::legacy::FunctionPassManager> FunctionPassManager =
 static std::unordered_map<std::string, std::unique_ptr<PrototypeAST>>
     FunctionProtos;
 
+SourceLocation::SourceLocation() : SourceLocation(1, 0) {}
+
 SourceLocation::SourceLocation(int Line, int Col) : Line(Line), Col(Col) {}
 
 int SourceLocation::line() const { return Line; }
